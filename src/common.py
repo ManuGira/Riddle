@@ -4,6 +4,7 @@ from os.path import join as pjoin
 from gensim.models import KeyedVectors
 
 
+
 def load_most_frequent_words(N: int = None, model=None):
     here = os.path.abspath(os.path.dirname(__file__))
     data_folder = pjoin(here, "..", "data")
@@ -14,6 +15,9 @@ def load_most_frequent_words(N: int = None, model=None):
 
     words = [word.replace("œ", "oe") for word in words]  # replace œ with oe
     words = [word for word in words if "'" not in word]  # remove words with apostrophes
+    UNKNOWN_WORDS = "un le de ne ce ou où plusieurs lequel selon".split()  # unknonw words to remove
+    words = [word for word in words if word not in UNKNOWN_WORDS]
+    words = [word for word in words if len(word) >= 2] # min length 2
 
     if model is not None:
         words = [word for word in words if word in model.key_to_index]
@@ -21,10 +25,8 @@ def load_most_frequent_words(N: int = None, model=None):
     if N is None:
         return words
 
-    indexes = np.linspace(0, len(words)-1, num=N, dtype=int)
-
-    selected_words = [words[i] for i in indexes]
-    return selected_words
+    N = min(N, len(words))
+    return words[:N]
 
 
 def load_model(model_file="frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"):

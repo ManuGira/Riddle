@@ -110,15 +110,12 @@ class GameAssistant:
 
     def run_interactive(self):
         """Interactive mode: ask user for input and print suggestions."""
-        print("Game Assistant started. Enter '_' to quit.")
+        print("Game Assistant started")
 
         print(f"\nFirst suggestion: {self.next_suggestion}")
 
         while True:
             word = input("\nEnter observed word: ").strip()
-            if word.lower() == '_':
-                print("Exiting assistant.")
-                break
 
             if word not in self.all_words:
                 print(f"Word '{word}' not in the list. Please try again.")
@@ -136,6 +133,19 @@ class GameAssistant:
 
             if suggestion:
                 print(f"\n→ Next suggestion: {suggestion}")
+
+    def run_interactive_semi_auto(self):
+        """Interactive mode: ask user for input and print suggestions."""
+        print("Game Assistant started")
+        print(f"\nFirst suggestion: {self.next_suggestion}")
+        suggestion = self.next_suggestion
+        while True:
+            try:
+                score = float(input(f"{suggestion}: "))
+            except ValueError:
+                print("Invalid input. Please enter a numeric score.")
+                continue
+            suggestion, msg = self.add_word_score(suggestion, score)
 
 def compute_heatmap_matrix_if_needed(words: list[str]) -> tuple[np.ndarray, np.ndarray]:
     # compute heatmap matrix if not already saved
@@ -173,7 +183,7 @@ def compute_heatmap_matrix_if_needed(words: list[str]) -> tuple[np.ndarray, np.n
 
 
 def main():
-    N = 3100
+    N = 5000
     print(f"Using {N} words.")
     model = load_model()
     words = load_most_frequent_words(N, model)
@@ -188,7 +198,7 @@ def main():
 
     print("Starting game assistant...")
     assistant = GameAssistant(heatmap_matrix, words)
-    assistant.run_interactive()
+    assistant.run_interactive_semi_auto()
 
 
 if __name__ == "__main__":
