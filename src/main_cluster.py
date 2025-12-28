@@ -2,7 +2,6 @@ import logging
 import time
 
 import numpy as np
-import sklearn
 
 import common as cmn
 
@@ -49,8 +48,10 @@ def reduce_dimensions_pca(vectors: np.ndarray, variance_ratio: float = 0.9) -> t
         tuple of (reduced_vectors, n_components) where reduced_vectors are the transformed
         vectors and n_components is the number of dimensions kept
     """
+    from sklearn.decomposition import PCA
+
     # Fit PCA with all components to get variance ratios
-    pca = sklearn.decomposition.PCA()
+    pca = PCA()
     pca.fit(vectors)
     
     # Find how many components are needed to preserve the variance ratio
@@ -58,7 +59,7 @@ def reduce_dimensions_pca(vectors: np.ndarray, variance_ratio: float = 0.9) -> t
     n_components = int(np.argmax(cumsum_variance >= variance_ratio) + 1)
     
     # Refit with the determined number of components
-    pca = sklearn.decomposition.PCA(n_components=n_components)
+    pca = PCA(n_components=n_components)
     reduced_vectors = pca.fit_transform(vectors)
     
     return reduced_vectors, n_components
@@ -75,8 +76,38 @@ def cluster_with_knn(vectors: np.ndarray, k: int = 5) -> np.ndarray:
     Returns:
         Cluster assignments for each word
     """
-    # TODO: Implement kNN clustering
-    raise NotImplementedError
+    from sklearn.neighbors import NearestNeighbors
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import connected_components
+    
+    n_samples = vectors.shape[0]
+    
+    # Handle edge case where k is larger than dataset size
+    k_effective = min(k, n_samples - 1)
+    
+    # Build k-nearest neighbors graph
+    nbrs = NearestNeighbors(n_neighbors=k_effective + 1, algorithm='auto').fit(vectors)
+    distances, indices = nbrs.kneighbors(vectors)
+    
+    # Build adjacency matrix (symmetric graph)
+    # Create edges between each point and its k-nearest neighbors
+    row_indices = np.repeat(np.arange(n_samples), k_effective + 1)
+    col_indices = indices.flatten()
+    data = np.ones(len(row_indices))
+    
+    # Create sparse adjacency matrix
+    adjacency_matrix = csr_matrix((data, (row_indices, col_indices)), 
+                                   shape=(n_samples, n_samples))
+    
+    # Make the graph symmetric
+    adjacency_matrix = adjacency_matrix + adjacency_matrix.T
+    
+    # Find connected components (clusters)
+    n_components, labels = connected_components(csgraph=adjacency_matrix, 
+                                                 directed=False, 
+                                                 return_labels=True)
+    
+    return labels
 
 
 def save_clusters(words: list[str], cluster_labels: np.ndarray, output_file: str):
