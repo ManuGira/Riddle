@@ -1,5 +1,8 @@
-import numpy as np
 import logging
+import time
+
+import numpy as np
+import sklearn
 
 import common as cmn
 
@@ -46,8 +49,19 @@ def reduce_dimensions_pca(vectors: np.ndarray, variance_ratio: float = 0.9) -> t
         tuple of (reduced_vectors, n_components) where reduced_vectors are the transformed
         vectors and n_components is the number of dimensions kept
     """
-    # TODO: Implement PCA dimensionality reduction
-    raise NotImplementedError
+    # Fit PCA with all components to get variance ratios
+    pca = sklearn.decomposition.PCA()
+    pca.fit(vectors)
+    
+    # Find how many components are needed to preserve the variance ratio
+    cumsum_variance = np.cumsum(pca.explained_variance_ratio_)
+    n_components = int(np.argmax(cumsum_variance >= variance_ratio) + 1)
+    
+    # Refit with the determined number of components
+    pca = sklearn.decomposition.PCA(n_components=n_components)
+    reduced_vectors = pca.fit_transform(vectors)
+    
+    return reduced_vectors, n_components
 
 
 def cluster_with_knn(vectors: np.ndarray, k: int = 5) -> np.ndarray:
@@ -122,12 +136,15 @@ def main():
     # Step 3: Extract vectors for those words
     logger.info("Extracting word vectors...")
     word_vectors = extract_word_vectors(model, frequent_words)
-    logger.info(f"Extracted vectors with dimension {word_vectors.shape[1]}")
+    initial_dimensionality = word_vectors.shape[1]
+    logger.info(f"Extracted vectors with dimension {initial_dimensionality}")
     
     # Step 4: Compute PCA to reduce dimensions
     logger.info(f"Reducing dimensions with PCA (preserving {VARIANCE_RATIO*100}% variance)...")
+    tick = time.time()
     reduced_vectors, n_components = reduce_dimensions_pca(word_vectors, variance_ratio=VARIANCE_RATIO)
-    logger.info(f"Reduced to {n_components} dimensions")
+    tock = time.time()
+    logger.info(f"PCA completed in {tock - tick:.2f} seconds, reduced from {initial_dimensionality} to {n_components} dimensions")
     
     # Step 5: Cluster words using kNN
     logger.info(f"Clustering words with kNN (k={K_NEIGHBORS})...")

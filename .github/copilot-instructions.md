@@ -34,3 +34,9 @@ uv run pytest tests/test_example.py
 - `uv run src/main_cluster.py`
 
 For any automation or AI agent execution, always use the `uv run` command format.
+
+
+## Python Typing Style
+
+When using type hints, **prefer the built-in collection types** (`list`, `dict`, `tuple`, etc.) over importing from `typing` (e.g., avoid `from typing import List, Dict, Tuple`).
+Use `list[str]`, `dict[str, int]`, etc., for type annotations.
