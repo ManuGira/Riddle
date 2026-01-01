@@ -6,7 +6,7 @@ from os.path import join as pjoin, dirname
 # Add src directory to path
 sys.path.insert(0, pjoin(dirname(__file__), "..", "src"))
 
-from main_cluster import reduce_dimensions_pca, cluster_with_knn
+from main_cluster import reduce_dimensions_pca, cluster_with_knn, suggest_eps_values, cluster_with_kmeans
 
 
 class TestReduceDimensionsPCA:
@@ -133,23 +133,143 @@ class TestClusterWithKNN:
     """Tests for cluster_with_knn function"""
 
     @pytest.fixture
-    def simple_clustered_data(self):
-        """Create simple data with obvious clusters"""
+    def sample_vectors(self):
+        """Create sample vectors for testing"""
         np.random.seed(42)
-        # Create 3 distinct clusters
-        cluster1 = np.random.randn(20, 2) + np.array([0, 0])
-        cluster2 = np.random.randn(20, 2) + np.array([10, 10])
-        cluster3 = np.random.randn(20, 2) + np.array([10, -10])
-        return np.vstack([cluster1, cluster2, cluster3])
+        # Create 50 samples with 10 features
+        return np.random.randn(50, 10)
 
     @pytest.fixture
-    def linear_data(self):
-        """Create linearly arranged data"""
+    def clustered_vectors(self):
+        """Create vectors that naturally form clusters"""
         np.random.seed(42)
-        # Points arranged in a line
-        x = np.linspace(0, 10, 50)
-        y = x + np.random.randn(50) * 0.1
-        return np.column_stack([x, y])
+        # Create 3 distinct clusters
+        cluster1 = np.random.randn(20, 10) + np.array([10, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        cluster2 = np.random.randn(20, 10) + np.array([0, 10, 0, 0, 0, 0, 0, 0, 0, 0])
+        cluster3 = np.random.randn(20, 10) + np.array([0, 0, 10, 0, 0, 0, 0, 0, 0, 0])
+        return np.vstack([cluster1, cluster2, cluster3])
+
+    def test_cluster_basic(self, sample_vectors):
+        """Test basic DBSCAN clustering with eps"""
+        eps = 0.5
+        cluster_labels = cluster_with_knn(sample_vectors, eps=eps)
+        
+        # Check return type
+        assert isinstance(cluster_labels, np.ndarray)
+        
+        # Check output shape matches input
+        assert cluster_labels.shape[0] == sample_vectors.shape[0]
+        
+        # Check that labels are integers
+        assert np.issubdtype(cluster_labels.dtype, np.integer)
+        
+        # Check that we have at least one cluster
+        assert len(np.unique(cluster_labels)) >= 1
+
+    def test_cluster_count_reasonable(self, sample_vectors):
+        """Test that number of clusters is reasonable"""
+        eps = 0.5
+        cluster_labels = cluster_with_knn(sample_vectors, eps=eps)
+        
+        n_clusters = len(np.unique(cluster_labels))
+        
+        # Should have fewer clusters than samples
+        assert n_clusters < sample_vectors.shape[0]
+        # Should have at least 1 cluster
+        assert n_clusters >= 1
+
+    def test_different_eps_values(self, sample_vectors):
+        """Test with different eps values"""
+        labels_small = cluster_with_knn(sample_vectors, eps=0.3)
+        labels_large = cluster_with_knn(sample_vectors, eps=0.7)
+        
+        # Both should produce valid results
+        assert labels_small.shape[0] == sample_vectors.shape[0]
+        assert labels_large.shape[0] == sample_vectors.shape[0]
+        
+        # Different eps values may produce different clusterings
+        assert len(np.unique(labels_small)) >= 1
+        assert len(np.unique(labels_large)) >= 1
+
+    def test_min_samples_parameter(self, sample_vectors):
+        """Test with different min_samples values"""
+        eps = 0.5
+        labels_min2 = cluster_with_knn(sample_vectors, eps=eps, min_samples=2)
+        labels_min5 = cluster_with_knn(sample_vectors, eps=eps, min_samples=5)
+        
+        # Both should produce valid results
+        assert labels_min2.shape[0] == sample_vectors.shape[0]
+        assert labels_min5.shape[0] == sample_vectors.shape[0]
+
+    def test_distinct_clusters(self, clustered_vectors):
+        """Test with well-separated clusters"""
+        # Use a small eps to find distinct clusters
+        eps = 0.5
+        cluster_labels = cluster_with_knn(clustered_vectors, eps=eps)
+        
+        # Should find at least one cluster
+        n_clusters = len(np.unique(cluster_labels))
+        assert n_clusters >= 1
+        
+        # Each cluster should have some points
+        for label in np.unique(cluster_labels):
+            assert np.sum(cluster_labels == label) > 0
+
+    def test_small_dataset(self):
+        """Test with a very small dataset"""
+        np.random.seed(42)
+        small_vectors = np.random.randn(10, 5)
+        
+        eps = 0.5
+        cluster_labels = cluster_with_knn(small_vectors, eps=eps, min_samples=2)
+        
+        # Should handle small datasets
+        assert cluster_labels.shape[0] == 10
+        assert len(np.unique(cluster_labels)) >= 1
+
+    def test_reproducibility(self, sample_vectors):
+        """Test that results are reproducible"""
+        eps = 0.5
+        labels_1 = cluster_with_knn(sample_vectors, eps=eps)
+        labels_2 = cluster_with_knn(sample_vectors, eps=eps)
+        
+        assert np.array_equal(labels_1, labels_2)
+
+    def test_input_not_modified(self, sample_vectors):
+        """Test that input vectors are not modified"""
+        original_vectors = sample_vectors.copy()
+        eps = 0.5
+        
+        cluster_with_knn(sample_vectors, eps=eps)
+        
+        # Original should remain unchanged
+        assert np.allclose(sample_vectors, original_vectors)
+
+    def test_2d_vectors(self):
+        """Test with 2D vectors (already reduced)"""
+        np.random.seed(42)
+        vectors_2d = np.random.randn(30, 2)
+        
+        eps = 0.5
+        cluster_labels = cluster_with_knn(vectors_2d, eps=eps)
+        
+        assert cluster_labels.shape[0] == 30
+        assert len(np.unique(cluster_labels)) >= 1
+
+    def test_high_dimensional_vectors(self):
+        """Test with high-dimensional vectors"""
+        np.random.seed(42)
+        high_dim_vectors = np.random.randn(100, 100)
+        
+        eps = 0.5
+        cluster_labels = cluster_with_knn(high_dim_vectors, eps=eps)
+        
+        assert cluster_labels.shape[0] == 100
+        assert len(np.unique(cluster_labels)) >= 1
+
+
+class TestSuggestEpsValues:
+    """Tests for suggest_eps_values function"""
 
     @pytest.fixture
     def sample_vectors(self):
@@ -157,118 +277,186 @@ class TestClusterWithKNN:
         np.random.seed(42)
         return np.random.randn(50, 10)
 
-    def test_cluster_basic_functionality(self, simple_clustered_data):
-        """Test basic clustering functionality"""
-        cluster_labels = cluster_with_knn(simple_clustered_data, k=5)
+    def test_suggest_eps_basic(self, sample_vectors):
+        """Test basic eps suggestion"""
+        eps_values = suggest_eps_values(sample_vectors, k=5)
+        
+        # Check return type
+        assert isinstance(eps_values, dict)
+        
+        # Check all expected keys are present
+        expected_keys = ['min', 'percentile_25', 'median', 'percentile_75', 'max']
+        assert all(key in eps_values for key in expected_keys)
+        
+        # Check that values are floats
+        assert all(isinstance(v, float) for v in eps_values.values())
+        
+        # Check that values are in ascending order
+        assert eps_values['min'] <= eps_values['percentile_25']
+        assert eps_values['percentile_25'] <= eps_values['median']
+        assert eps_values['median'] <= eps_values['percentile_75']
+        assert eps_values['percentile_75'] <= eps_values['max']
+
+    def test_suggest_eps_different_k(self, sample_vectors):
+        """Test with different k values"""
+        eps_k3 = suggest_eps_values(sample_vectors, k=3)
+        eps_k7 = suggest_eps_values(sample_vectors, k=7)
+        
+        # Both should return valid dictionaries
+        assert isinstance(eps_k3, dict)
+        assert isinstance(eps_k7, dict)
+        
+        # k=7 should generally have larger distances than k=3
+        # (because 7th neighbor is farther than 3rd neighbor)
+        assert eps_k7['median'] >= eps_k3['median']
+
+    def test_suggest_eps_small_dataset(self):
+        """Test with small dataset"""
+        np.random.seed(42)
+        small_vectors = np.random.randn(5, 3)
+        
+        eps_values = suggest_eps_values(small_vectors, k=10)
+        
+        # Should still return valid values
+        assert isinstance(eps_values, dict)
+        assert all(isinstance(v, float) for v in eps_values.values())
+
+class TestClusterWithKMeans:
+    """Tests for cluster_with_kmeans function"""
+
+    @pytest.fixture
+    def sample_vectors(self):
+        """Create sample vectors for testing"""
+        np.random.seed(42)
+        # Create 50 samples with 10 features
+        return np.random.randn(50, 10)
+
+    @pytest.fixture
+    def clustered_vectors(self):
+        """Create vectors that naturally form clusters"""
+        np.random.seed(42)
+        # Create 3 distinct clusters
+        cluster1 = np.random.randn(20, 10) + np.array([10, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        cluster2 = np.random.randn(20, 10) + np.array([0, 10, 0, 0, 0, 0, 0, 0, 0, 0])
+        cluster3 = np.random.randn(20, 10) + np.array([0, 0, 10, 0, 0, 0, 0, 0, 0, 0])
+        return np.vstack([cluster1, cluster2, cluster3])
+
+    def test_kmeans_basic(self, sample_vectors):
+        """Test basic k-means clustering"""
+        n_clusters = 3
+        cluster_labels = cluster_with_kmeans(sample_vectors, n_clusters=n_clusters)
         
         # Check return type
         assert isinstance(cluster_labels, np.ndarray)
         
-        # Check shape matches input
-        assert cluster_labels.shape[0] == simple_clustered_data.shape[0]
+        # Check output shape matches input
+        assert cluster_labels.shape[0] == sample_vectors.shape[0]
         
-        # Check that we have at least one cluster
-        n_clusters = len(np.unique(cluster_labels))
-        assert n_clusters >= 1
-        
-    def test_cluster_labels_are_integers(self, sample_vectors):
-        """Test that cluster labels are integers"""
-        cluster_labels = cluster_with_knn(sample_vectors, k=5)
-        
-        # All labels should be integers
+        # Check that labels are integers
         assert np.issubdtype(cluster_labels.dtype, np.integer)
         
-    def test_cluster_labels_start_from_zero(self, sample_vectors):
-        """Test that cluster labels start from 0"""
-        cluster_labels = cluster_with_knn(sample_vectors, k=5)
-        
-        # Labels should start from 0
-        assert np.min(cluster_labels) == 0
-        
-    def test_cluster_labels_are_consecutive(self, sample_vectors):
-        """Test that cluster labels are consecutive (0, 1, 2, ...)"""
-        cluster_labels = cluster_with_knn(sample_vectors, k=5)
-        
-        unique_labels = np.unique(cluster_labels)
-        # Labels should be consecutive starting from 0
-        expected_labels = np.arange(len(unique_labels))
-        assert np.array_equal(unique_labels, expected_labels)
-        
-    def test_different_k_values(self, simple_clustered_data):
-        """Test with different k values"""
-        labels_k3 = cluster_with_knn(simple_clustered_data, k=3)
-        labels_k7 = cluster_with_knn(simple_clustered_data, k=7)
+        # Check that we have the requested number of clusters
+        assert len(np.unique(cluster_labels)) == n_clusters
+
+    def test_kmeans_different_n_clusters(self, sample_vectors):
+        """Test with different numbers of clusters"""
+        labels_2 = cluster_with_kmeans(sample_vectors, n_clusters=2)
+        labels_5 = cluster_with_kmeans(sample_vectors, n_clusters=5)
         
         # Both should produce valid results
-        assert labels_k3.shape[0] == simple_clustered_data.shape[0]
-        assert labels_k7.shape[0] == simple_clustered_data.shape[0]
+        assert labels_2.shape[0] == sample_vectors.shape[0]
+        assert labels_5.shape[0] == sample_vectors.shape[0]
         
-        # Both should have at least one cluster
-        assert len(np.unique(labels_k3)) >= 1
-        assert len(np.unique(labels_k7)) >= 1
+        # Should have the requested number of clusters
+        assert len(np.unique(labels_2)) == 2
+        assert len(np.unique(labels_5)) == 5
+
+    def test_kmeans_cosine_metric(self, sample_vectors):
+        """Test that cosine metric works"""
+        cluster_labels = cluster_with_kmeans(sample_vectors, n_clusters=3, metric='cosine')
         
-    def test_default_k_value(self, sample_vectors):
-        """Test that default k value is 5"""
-        labels_default = cluster_with_knn(sample_vectors)
-        labels_explicit = cluster_with_knn(sample_vectors, k=5)
+        # Should produce valid clustering
+        assert cluster_labels.shape[0] == sample_vectors.shape[0]
+        assert len(np.unique(cluster_labels)) == 3
+
+    def test_kmeans_euclidean_metric(self, sample_vectors):
+        """Test with euclidean metric"""
+        cluster_labels = cluster_with_kmeans(sample_vectors, n_clusters=3, metric='euclidean')
         
-        assert np.array_equal(labels_default, labels_explicit)
+        # Should produce valid clustering
+        assert cluster_labels.shape[0] == sample_vectors.shape[0]
+        assert len(np.unique(cluster_labels)) == 3
+
+    def test_kmeans_distinct_clusters(self, clustered_vectors):
+        """Test with well-separated clusters"""
+        cluster_labels = cluster_with_kmeans(clustered_vectors, n_clusters=3)
         
-    def test_small_dataset(self):
+        # Should find exactly 3 clusters
+        n_clusters = len(np.unique(cluster_labels))
+        assert n_clusters == 3
+        
+        # Each cluster should have some points
+        for label in np.unique(cluster_labels):
+            assert np.sum(cluster_labels == label) > 0
+
+    def test_kmeans_single_cluster(self, sample_vectors):
+        """Test with single cluster"""
+        cluster_labels = cluster_with_kmeans(sample_vectors, n_clusters=1)
+        
+        # All points should be in the same cluster
+        assert len(np.unique(cluster_labels)) == 1
+        assert np.all(cluster_labels == 0)
+
+    def test_kmeans_small_dataset(self):
         """Test with a very small dataset"""
         np.random.seed(42)
-        small_vectors = np.random.randn(10, 3)
+        small_vectors = np.random.randn(10, 5)
         
-        cluster_labels = cluster_with_knn(small_vectors, k=3)
+        cluster_labels = cluster_with_kmeans(small_vectors, n_clusters=3)
         
-        # Should work even with small data
+        # Should handle small datasets
         assert cluster_labels.shape[0] == 10
-        assert len(np.unique(cluster_labels)) >= 1
+        assert len(np.unique(cluster_labels)) == 3
+
+    def test_kmeans_reproducibility(self, sample_vectors):
+        """Test that results are reproducible with same random_state"""
+        labels_1 = cluster_with_kmeans(sample_vectors, n_clusters=3, random_state=42)
+        labels_2 = cluster_with_kmeans(sample_vectors, n_clusters=3, random_state=42)
         
-    def test_high_dimensional_data(self):
-        """Test with high-dimensional data"""
-        np.random.seed(42)
-        high_dim_vectors = np.random.randn(30, 100)
-        
-        cluster_labels = cluster_with_knn(high_dim_vectors, k=5)
-        
-        # Should handle high dimensions
-        assert cluster_labels.shape[0] == 30
-        assert len(np.unique(cluster_labels)) >= 1
-        
-    def test_input_not_modified(self, sample_vectors):
+        assert np.array_equal(labels_1, labels_2)
+
+    def test_kmeans_input_not_modified(self, sample_vectors):
         """Test that input vectors are not modified"""
         original_vectors = sample_vectors.copy()
         
-        cluster_with_knn(sample_vectors, k=5)
+        cluster_with_kmeans(sample_vectors, n_clusters=3)
         
         # Original should remain unchanged
         assert np.allclose(sample_vectors, original_vectors)
-        
-    def test_reproducibility(self, sample_vectors):
-        """Test that results are reproducible"""
-        labels_1 = cluster_with_knn(sample_vectors, k=5)
-        labels_2 = cluster_with_knn(sample_vectors, k=5)
-        
-        assert np.array_equal(labels_1, labels_2)
-        
-    def test_well_separated_clusters(self, simple_clustered_data):
-        """Test that well-separated clusters are detected"""
-        cluster_labels = cluster_with_knn(simple_clustered_data, k=5)
-        
-        # With 3 well-separated clusters, we should get reasonable clustering
-        n_clusters = len(np.unique(cluster_labels))
-        # Should detect at least 2 clusters (being conservative)
-        assert n_clusters >= 2
-        
-    def test_k_larger_than_dataset(self):
-        """Test edge case where k is larger than dataset size"""
+
+    def test_kmeans_2d_vectors(self):
+        """Test with 2D vectors"""
         np.random.seed(42)
-        tiny_vectors = np.random.randn(5, 3)
+        vectors_2d = np.random.randn(30, 2)
         
-        # k=10 is larger than dataset size (5)
-        # Should still work (algorithm should handle this gracefully)
-        cluster_labels = cluster_with_knn(tiny_vectors, k=10)
+        cluster_labels = cluster_with_kmeans(vectors_2d, n_clusters=4)
         
-        assert cluster_labels.shape[0] == 5
-        assert len(np.unique(cluster_labels)) >= 1
+        assert cluster_labels.shape[0] == 30
+        assert len(np.unique(cluster_labels)) == 4
+
+    def test_kmeans_high_dimensional_vectors(self):
+        """Test with high-dimensional vectors"""
+        np.random.seed(42)
+        high_dim_vectors = np.random.randn(100, 100)
+        
+        cluster_labels = cluster_with_kmeans(high_dim_vectors, n_clusters=5)
+        
+        assert cluster_labels.shape[0] == 100
+        assert len(np.unique(cluster_labels)) == 5
+
+    def test_kmeans_default_metric(self, sample_vectors):
+        """Test that default metric is cosine"""
+        labels_default = cluster_with_kmeans(sample_vectors, n_clusters=3, random_state=42)
+        labels_explicit = cluster_with_kmeans(sample_vectors, n_clusters=3, metric='cosine', random_state=42)
+        
+        assert np.array_equal(labels_default, labels_explicit)

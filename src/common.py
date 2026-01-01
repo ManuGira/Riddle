@@ -3,7 +3,43 @@ import numpy as np
 from os.path import join as pjoin
 from gensim.models import KeyedVectors
 
+def unit_vector(vec: np.ndarray) -> np.ndarray:
+    """
+    Normalize a vector to unit length.
+    
+    Args:
+        vec: Input vector
+        
+    Returns:
+        Unit vector
+    """
+    return vec / np.linalg.norm(vec, axis=1)
 
+def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    """
+    Compute cosine similarity between two vectors.
+    
+    Args:
+        vec1: First vector
+        vec2: Second vector
+        
+    Returns:
+        Cosine similarity value
+    """
+    return np.dot(unit_vector(vec1), unit_vector(vec2))
+
+def cosine_distance(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    """
+    Compute cosine distance between two vectors.
+    
+    Args:
+        vec1: First vector
+        vec2: Second vector
+        
+    Returns:
+        Cosine distance value
+    """
+    return 1.0 - cosine_similarity(vec1, vec2)
 
 def load_most_frequent_words(N: int = None, model=None):
     here = os.path.abspath(os.path.dirname(__file__))
@@ -26,6 +62,10 @@ def load_most_frequent_words(N: int = None, model=None):
         return words
 
     N = min(N, len(words))
+    if True:
+        # pick N words evenly spaced in the list
+        step = len(words) // N
+        return [words[int(i * step)] for i in range(N)]
     return words[:N]
 
 
