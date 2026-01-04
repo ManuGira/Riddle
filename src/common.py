@@ -218,7 +218,7 @@ def load_all_words(language: str) -> list[str]:
         ),
         "english": LexiconFile(
             filename="english_words.txt",
-            url="https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt",
+            url="https://people.sc.fsu.edu/~jburkardt/datasets/words/wordle.txt",
         ),
     }
 
