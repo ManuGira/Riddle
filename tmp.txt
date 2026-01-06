@@ -1,0 +1,6 @@
+Loading french words of 4 distinct letters...
+Downloading the lexicon...
+Number of valid words: 715
+20 most frequent letters: e a i r o u s t n l c p d m v f b g h x
+Optimal words:  ['banc', 'golf', 'purs', 'thym', 'vide']
+Total score : 2.7333454639668076
