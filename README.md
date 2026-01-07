@@ -8,6 +8,8 @@ This project finds optimal opening word combinations for Wordle-like games using
 
 | Word Length | Number of Words | Opening Words              |
 |-------------|-----------------|----------------------------|
+| 4 | 4               | deca, flop, murs, vint     |
+| 4 | 5               | bang, dupe, fric, thym, vols |
 | 5 | 3               | abces, lundi, rompt        |
 | 5 | 4               | clamp, hebdo, jurys, vingt |
 | 6 | 2               | amours, client             |
