@@ -197,7 +197,7 @@ class CrossWordsBoard:
 
         return min_x, max_x, min_y, max_y
 
-    def generate_board(self) -> np.ndarray:
+    def render_revealed_board_txt(self) -> np.ndarray:
         """Display the current state of the board."""
         if not self.placements:
             print("Board is empty.")
@@ -218,7 +218,7 @@ class CrossWordsBoard:
 
         return board_array
 
-    def generate_board_mask(self) -> np.ndarray:
+    def render_board_mask_bool(self) -> np.ndarray:
         if not self.placements:
             print("Board is empty.")
             return np.array([[]])
@@ -238,42 +238,106 @@ class CrossWordsBoard:
 
         return board_mask
 
-    def generate_revealed_board(self) -> np.ndarray:
-        board_str = self.generate_board()
-        board_mask = self.generate_board_mask()
+    def render_board_txt(self) -> np.ndarray:
+        board_str = self.render_revealed_board_txt()
+        board_mask = self.render_board_mask_bool()
 
         letters_to_mask = np.logical_and(board_str != ".", ~board_mask)
         board_str[letters_to_mask] = "+"
         return board_str
 
+class IModel:
+    def similarity(self, word1: str, word2: str) -> float:
+        pass
 
-def load_words():
-    MODEL_PATH = "frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"  # TODO: Update with actual path
+class CrossWordsGenerator:
+    def __init__(self, board: CrossWordsBoard, model: IModel, size: int):
+        self.board = board
+        self.model = model
+        self.size = size
 
-    # Step 1: Load word2vec model
-    print("Loading word2vec model...")
-    model = cmn.load_model(MODEL_PATH)
+        sorted_words, similarity_map = self.load_words(self.model)
+        self.root_word = sorted_words[0]
+        self.sorted_words = sorted_words
+        self.similarity_map = similarity_map
 
-    print("Loading frequent words...")
-    frequent_words = cmn.load_most_frequent_words(model=model)
+        self.generate_game()
 
-    # filter out words shorter than 3 characters
-    frequent_words = [word for word in frequent_words if len(word) >= 3]
 
-    # Choose a root word at random from the frequent words
-    root_word = np.random.choice(frequent_words)
+    @staticmethod
+    def load_words(model: IModel) -> tuple[list[str], dict[str, float]]:
+        # self.model_path = "frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"  # TODO: Update with actual path
 
-    # sort all words by their similarity to the root word
-    print("Sorting words by similarity to root word:", root_word)
-    sorted_words = sorted(frequent_words, key=lambda w: model.similarity(root_word, w), reverse=True)
-    return sorted_words
+        # Step 1: Load word2vec model
+        # print("Loading word2vec model...")
+        # model = cmn.load_model(model_path)
 
-def start_game(board: CrossWordsBoard):
+        print("Loading frequent words...")
+        frequent_words = cmn.load_most_frequent_words(model=model)
+
+        # filter out words shorter than 3 characters
+        frequent_words = [word for word in frequent_words if len(word) >= 3]
+
+        # Choose a root word at random from the frequent words
+        root_word = np.random.choice(frequent_words)
+
+        # sort all words by their similarity to the root word
+        print("Sorting words by similarity to root word:", root_word)
+        similarity_map: dict[str, float] = {word: model.similarity(root_word, word) for word in frequent_words}
+
+        sorted_words: list[str] = sorted(frequent_words, key=lambda w: similarity_map[w], reverse=True)
+        return sorted_words, similarity_map
+
+    def generate_game(self):
+        placed_words = []
+        while len(self.board.placements) < self.size:
+            # find the first word in sorted_words that is not already on the board
+            word = None
+            candidate_positions: list[CrossWord] = []
+            for candidate_word in self.sorted_words:
+                if candidate_word not in placed_words :
+                    word = candidate_word
+
+                    # Compute candidate placements for the new word
+                    candidate_positions = self.board.compute_new_word_placements(word)
+                    print(f"Candidates for '{word}':")
+                    for candidate in candidate_positions:
+                        print("\t", candidate)
+                    if len(candidate_positions) == 0:
+                        print(f"No valid placements for '{word}'. Skipping.")
+                        continue
+
+                    break
+
+            if candidate_positions:
+                # Group by candidate duplicates. choose in priority candidates with most duplicates.
+                # This favors placements that cross multiple words, making the game easier to solve
+                candidate_count: dict[int, list[CrossWord]] = {}
+                for candidate in candidate_positions:
+                    count = sum(1 for other in candidate_positions if other == candidate)
+                    if count not in candidate_count:
+                        candidate_count[count] = []
+                    candidate_count[count].append(candidate)
+
+                    max_count = max(candidate_count.keys())
+                    candidate_positions = candidate_count[max_count]
+
+            new_crossword = np.random.choice(candidate_positions) if candidate_positions else None
+            self.board.add_word(new_crossword)
+            placed_words.append(word)
+
+def run_game():
+    game = CrossWordsGenerator(
+        CrossWordsBoard(),
+        cmn.load_model(),
+        size=10,
+    )
+
     # reveal the first word
-    board.reveal_word(board.placements[0].word)
+    game.board.reveal_word(game.board.placements[0].word)
     # previous_board_str = None
     while True:
-        board_str = board.generate_revealed_board()
+        board_str = game.board.render_board_txt()
         # if previous_board_str is None:
         #     previous_board_str = board_str
 
@@ -285,59 +349,18 @@ def start_game(board: CrossWordsBoard):
                 # blue bold default color
                 color = "\033[94;1m"
                 if char in "+.":
-                    # light gray for hidden letterss
+                    # light gray for hidden letters
                     color = "\033[90m"
 
                 row.append(f"{color}{char}{color_end}")
             print(" ".join(row))
 
         user_word = input("Enter a word to reveal> ").strip()
-        board.reveal_word(user_word)
+        game.board.reveal_word(user_word)
+
 
 def main():
-    board = CrossWordsBoard()
-    words = load_words()
-    # words = ["école", "primaire", "scolaire", "élémentaire", "collège", "classe", "élève", "éducation", "instituteur", "lycée", "secondaire", "enseigner", "enseignant", "rentrée", "enseignement", "professeur", "cycle", "apprendre", "civique", "fréquenter", "sixième", "enlever", "apprentissage", "établissement", "réussite", "enfant", "enfance", "inspecteur", "discipline", "orientation", "citoyenneté", "institution", "instruire", "degré", "adulte", "difficulté", "supérieur", "adolescent", "cours", "année", "dès", "rénovation", "prioritaire", "gamin", "technologie", "initier", "inspection", "précoce", "échec", "collègue", "famille", "amener", "universitaire", "grand-père", "grand-mère", "fiche", "lecture", "culture", "jeune", "municipalité", "métier", "cirque", "camarade", "progressivement", "âge", "intégration", "autrefois", "réussir", "copain", "préparer", "intégrer", "atelier", "instruction", "grandir", "maison", "pratique", "former", "mère", "dans", "cité", "travailler", "sou", "tante", "garçon", "entrée", "parent", "aider", "excellence", "maître", "présentement", "artistique", "autonomie", "jeunesse", "ingénieur", "approprier", "tôt", "maternel", "encadrement", "leçon", "écriture"]
-
-    for word in words:
-        # Compute candidate placements for the new word
-        candidate_positions: list[CrossWord] = board.compute_new_word_placements(word)
-        print(f"Candidates for '{word}':")
-        for candidate in candidate_positions:
-            print("\t", candidate)
-        if not candidate_positions:
-            print(f"No valid placements for '{word}'. Skipping.")
-            continue
-
-        if candidate_positions:
-            # Group by candidate duplicates. choose in priority candidates with most duplicates.
-            # This favors placements that cross multiple words, making the game easier to solve
-            candidate_count: dict[int, list[CrossWord]] = {}
-            for candidate in candidate_positions:
-                count = sum(1 for other in candidate_positions if other == candidate)
-                if count not in candidate_count:
-                    candidate_count[count] = []
-                candidate_count[count].append(candidate)
-
-            max_count = max(candidate_count.keys())
-            candidate_positions = candidate_count[max_count]
-
-        new_crossword = np.random.choice(candidate_positions) if candidate_positions else None
-        board.add_word(new_crossword)
-
-        if len(board.placements) == 10:
-            break
-
-    print("Final board:")
-    board_str = board.generate_board()
-    print("Current board:")
-    for row_str in board_str:
-        print(" ".join(row_str))
-
-    print("\n"*30)
-    start_game(board)
-
-
+    run_game()
 
 if __name__ == "__main__":
     main()
