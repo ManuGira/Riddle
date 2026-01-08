@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle-Like Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .game-info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.2em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-align: center;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .reset-btn {
+            background: #e74c3c;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .reset-btn:hover {
+            background: #c0392b;
+        }
+
+        .guesses {
+            margin-top: 30px;
+        }
+
+        .guess-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .letter-box {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            text-transform: uppercase;
+        }
+
+        .letter-box.correct {
+            background: #6aaa64;
+            color: white;
+            border-color: #6aaa64;
+        }
+
+        .letter-box.present {
+            background: #c9b458;
+            color: white;
+            border-color: #c9b458;
+        }
+
+        .letter-box.absent {
+            background: #787c7e;
+            color: white;
+            border-color: #787c7e;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Wordle Game</h1>
+        <p class="subtitle">Guess the 5-letter word in 6 tries</p>
+
+        <div class="game-info">
+            <div id="dateInfo">Loading...</div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" id="guessInput" placeholder="Enter word" maxlength="5" autocomplete="off">
+                <button id="submitBtn" onclick="submitGuess()">Submit</button>
+            </div>
+            <button class="reset-btn" onclick="resetGame()">New Game</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="attemptsCount">0</div>
+                <div class="stat-label">Attempts</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="remainingCount">6</div>
+                <div class="stat-label">Remaining</div>
+            </div>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="guesses" id="guessesContainer"></div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        const TOKEN_KEY = 'game_token';
+
+        // Load token from localStorage
+        function getToken() {
+            return localStorage.getItem(TOKEN_KEY);
+        }
+
+        // Save token to localStorage
+        function saveToken(token) {
+            localStorage.setItem(TOKEN_KEY, token);
+        }
+
+        // Clear token from localStorage
+        function clearToken() {
+            localStorage.removeItem(TOKEN_KEY);
+        }
+
+        // Load game info on page load
+        async function loadGameInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/api/info`);
+                const data = await response.json();
+                document.getElementById('dateInfo').textContent = `📅 ${data.date} | Word Length: ${data.word_length} | Max Attempts: ${data.max_attempts}`;
+            } catch (error) {
+                console.error('Error loading game info:', error);
+            }
+        }
+
+        // Display message
+        function showMessage(text, type = 'info') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.classList.remove('hidden');
+        }
+
+        // Hide message
+        function hideMessage() {
+            document.getElementById('message').classList.add('hidden');
+        }
+
+        // Update stats
+        function updateStats(attempts, maxAttempts = 6) {
+            document.getElementById('attemptsCount').textContent = attempts;
+            document.getElementById('remainingCount').textContent = maxAttempts - attempts;
+        }
+
+        // Render guess history
+        function renderGuesses(guesses) {
+            const container = document.getElementById('guessesContainer');
+            container.innerHTML = '';
+
+            guesses.forEach(guessData => {
+                const row = document.createElement('div');
+                row.className = 'guess-row';
+
+                guessData.hints.forEach(hint => {
+                    const box = document.createElement('div');
+                    box.className = `letter-box ${hint.status}`;
+                    box.textContent = hint.letter;
+                    row.appendChild(box);
+                });
+
+                container.appendChild(row);
+            });
+        }
+
+        // Submit guess
+        async function submitGuess() {
+            const input = document.getElementById('guessInput');
+            const guess = input.value.trim().toUpperCase();
+
+            if (guess.length !== 5) {
+                showMessage('Please enter a 5-letter word', 'error');
+                return;
+            }
+
+            hideMessage();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/guess`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        guess: guess,
+                        token: getToken()
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showMessage(data.detail || 'Error processing guess', 'error');
+                    submitBtn.disabled = false;
+                    return;
+                }
+
+                // Save new token
+                saveToken(data.token);
+
+                // Update UI
+                renderGuesses(data.state.guesses);
+                updateStats(data.state.attempts);
+
+                // Show message
+                if (data.message) {
+                    showMessage(data.message, data.game_over ? (data.state.won ? 'success' : 'error') : 'info');
+                }
+
+                // Clear input
+                input.value = '';
+
+                // Disable input if game over
+                if (data.game_over) {
+                    input.disabled = true;
+                    submitBtn.disabled = true;
+                } else {
+                    submitBtn.disabled = false;
+                    input.focus();
+                }
+
+            } catch (error) {
+                console.error('Error submitting guess:', error);
+                showMessage('Network error. Please try again.', 'error');
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Reset game
+        async function resetGame() {
+            if (!confirm('Are you sure you want to start a new game?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/reset`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                saveToken(data.token);
+
+                // Clear UI
+                document.getElementById('guessesContainer').innerHTML = '';
+                document.getElementById('guessInput').value = '';
+                document.getElementById('guessInput').disabled = false;
+                document.getElementById('submitBtn').disabled = false;
+                updateStats(0);
+                showMessage(data.message, 'info');
+
+            } catch (error) {
+                console.error('Error resetting game:', error);
+                showMessage('Error resetting game. Please refresh the page.', 'error');
+            }
+        }
+
+        // Handle Enter key
+        document.getElementById('guessInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitGuess();
+            }
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            await loadGameInfo();
+
+            // If there's a saved token, try to restore game state
+            const token = getToken();
+            if (token) {
+                // Make a dummy request to validate token and restore state
+                try {
+                    const response = await fetch(`${API_BASE}/api/guess`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            guess: 'AAAAA',
+                            token: token
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        // If we got actual guesses back, the token was valid
+                        if (data.state && data.state.guesses && data.state.guesses.length > 0) {
+                            // Remove the dummy guess we just added
+                            data.state.guesses.pop();
+                            data.state.attempts--;
+                            
+                            renderGuesses(data.state.guesses);
+                            updateStats(data.state.attempts);
+                            
+                            if (data.state.completed) {
+                                document.getElementById('guessInput').disabled = true;
+                                document.getElementById('submitBtn').disabled = true;
+                                showMessage(`Game already completed!`, 'info');
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.log('Could not restore previous game state');
+                }
+            }
+
+            document.getElementById('guessInput').focus();
+        });
+    </script>
+</body>
+</html>
