@@ -10,6 +10,7 @@ dependencies = [
     "gensim>=4.4.0",
     "matplotlib>=3.10.8",
     "numpy>=2.4.0",
+    "opencv-python>=4.11.0.86",
     "ortools>=9.14.6206",
     "pyjwt>=2.10.1",
     "scikit-learn>=1.8.0",
