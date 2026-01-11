@@ -1,10 +1,10 @@
-from gamle import IGamle
+from riddle_interface import IRiddle
 import hashlib
 from pathlib import Path
 from server_game import GameServer
 from typing import Any
 
-class SimpleWordleGame(IGamle):        
+class SimpleWordleGame(IRiddle):        
         def __init__(self):
             super().__init__()
             # Load word list
