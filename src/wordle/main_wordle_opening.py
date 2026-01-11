@@ -69,7 +69,7 @@ def find_best_word_combination_brute_force(df_words: pd.DataFrame, N: int, metri
 
 
 
-def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]):
+def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str], frequency_map: dict[str, float]):
 
     # =========================
     # 3. ILP avec OR-Tools
@@ -78,26 +78,29 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
     assert solver is not None
 
     x = {i: solver.BoolVar(f"x_{i}") for i in df_words.index}
+    
+    # For each letter, create a binary variable indicating if it's used at least once
+    y = {letter: solver.BoolVar(f"y_{letter}") for letter in letters}
 
     # Constraints: N words
     solver.Add(sum(x[i] for i in x) == N)
 
-    # Constraints: distinct letters
+    # For each letter, y[letter] = 1 if at least one selected word contains that letter
     for letter in letters:
-        solver.Add(
-            sum(
-                x[i]
-                for i, word_letters in df_words["letters"].items()
-                if letter in word_letters
-            ) <= 1
-        )
+        words_with_letter = [
+            i for i, word_letters in df_words["letters"].items()
+            if letter in word_letters
+        ]
+        if words_with_letter:
+            # If any word containing this letter is selected, y[letter] can be 1
+            solver.Add(y[letter] <= sum(x[i] for i in words_with_letter))
+            # Force y[letter] to be 1 if any word with this letter is selected
+            for i in words_with_letter:
+                solver.Add(y[letter] >= x[i])
 
-    # objective, maximize total entropy
-    # solver.Maximize(
-    #     sum(df_words.loc[i, "entropy"] * x[i] for i in x)
-    # )
+    # Objective: maximize the sum of frequencies of distinct letters used
     solver.Maximize(
-        sum(df_words.loc[i, "frequency"] * x[i] for i in x)
+        sum(frequency_map[letter] * y[letter] for letter in letters)
     )
 
     status = solver.Solve()
@@ -110,8 +113,16 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
         solution = df_words.loc[
             [i for i in x if x[i].solution_value() == 1]
         ]
-        print("Optimal words: ", list(solution["word"]))
-        print("Total score :", solution["entropy"].sum())
+        selected_words = list(solution["word"])
+        all_letters = set()
+        for word in selected_words:
+            all_letters.update(word)
+        distinct_letter_count = len(all_letters)
+        total_frequency = sum(frequency_map[letter] for letter in all_letters)
+        
+        print("Optimal words: ", selected_words)
+        print(f"Distinct letters: {distinct_letter_count} ({', '.join(sorted(all_letters))})")
+        print(f"Total frequency score: {total_frequency:.4f}")
     else:
         print("No optimal solution found.")
 
@@ -147,7 +158,7 @@ def find_best_opening(language: str, length: int, N: int):
 
     # find_best_word_combination_brute_force(df_words, N, metric="frequency")
     # find_best_word_combination_brute_force(df_words, N, metric="entropy")
-    find_best_word_combination(df_words, N, letters)
+    find_best_word_combination(df_words, N, letters, frequency_map)
 
 
 if __name__ == "__main__":
