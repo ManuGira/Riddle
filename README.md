@@ -26,8 +26,10 @@ This installs the `riddle` module, making it available to all scripts in the pro
 | 4 | 5               | bang, dupe, fric, thym, vols |
 | 5 | 3               | abces, lundi, rompt        |
 | 5 | 4               | clamp, hebdo, jurys, vingt |
-| 6 | 2               | amours, client             |
+| 6 | 2               | cartes, moulin             |
 | 6 | 3               | dragon, mythes, public     |
+| 7 | 2               | inculpe, motards           |
+| 7 | 3               | No solution found          |
 
 ### English
 
