@@ -26,13 +26,13 @@ This installs the `riddle` module, making it available to all scripts in the pro
 | 4 | 5               | bang, dupe, fric, thym, vols         |
 | 5 | 3               | abces, lundi, rompt                  |
 | 5 | 4               | clamp, hebdo, jurys, vingt           |
-| 6 | 2               | ecrans, ultimo                       |
+| 6 | 2               | craint, moules                       |
 | 6 | 3               | dragon, mythes, public               |
 | 6 | 4               | bijoux, champs, devint, frugal       |
 | 7 | 2               | inculpe, motards                     |
 | 7 | 3               | chomage, devants, publier            |
-| 7 | 4               | drogman, flechir, paquets, verbaux   |
-| 8 | 2               | mouchard, plaintes                   |
+| 7 | 4               | abdomen, facheux, piquant, verglas   |
+| 8 | 2               | chanteur, diplomes                   |
 | 8 | 3               | bucheron, domptage, festival         |
 | 9 | 2               | degauchir, longtemps                 |
 

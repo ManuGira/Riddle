@@ -109,18 +109,16 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
             
             # Find words that have this letter at this position
             words_with_letter_at_pos = [
-                i for i in df_words.index
-                if len(df_words.loc[i, "word"]) > pos and df_words.loc[i, "word"][pos] == letter
+                i for i, word in df_words["word"].items()
+                if len(word) > pos and word[pos] == letter
             ]
             
             if words_with_letter_at_pos:
-                # z[letter][pos] = 1 only if exactly one word with letter at pos is selected
-                # This means: sum of x[i] for matching words <= 1, and z <= that sum
+                # Ensure at most one word with this letter at this position is selected
                 solver.Add(sum(x[i] for i in words_with_letter_at_pos) <= 1)
-                solver.Add(z[letter][pos] <= sum(x[i] for i in words_with_letter_at_pos))
-                # Force z to be 1 if exactly one matching word is selected
-                for i in words_with_letter_at_pos:
-                    solver.Add(z[letter][pos] >= x[i] - sum(x[j] for j in words_with_letter_at_pos if j != i))
+                # z[letter][pos] = 1 if and only if exactly one matching word is selected
+                # Since we already constrain sum <= 1, we can use equality
+                solver.Add(z[letter][pos] == sum(x[i] for i in words_with_letter_at_pos))
             else:
                 # No words have this letter at this position, z must be 0
                 solver.Add(z[letter][pos] == 0)
