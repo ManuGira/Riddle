@@ -20,16 +20,21 @@ This installs the `riddle` module, making it available to all scripts in the pro
 
 ### French
 
-| Word Length | Number of Words | Opening Words              |
-|-------------|-----------------|----------------------------|
-| 4 | 4               | deca, flop, murs, vint     |
-| 4 | 5               | bang, dupe, fric, thym, vols |
-| 5 | 3               | abces, lundi, rompt        |
-| 5 | 4               | clamp, hebdo, jurys, vingt |
-| 6 | 2               | ecrans, ultimo             |
-| 6 | 3               | dragon, mythes, public     |
-| 7 | 2               | inculpe, motards           |
-| 7 | 3               | camping, devront, humbles  |
+| Word Length | Number of Words | Opening Words                        |
+|-------------|-----------------|--------------------------------------|
+| 4 | 4               | deca, flop, murs, vint               |
+| 4 | 5               | bang, dupe, fric, thym, vols         |
+| 5 | 3               | abces, lundi, rompt                  |
+| 5 | 4               | clamp, hebdo, jurys, vingt           |
+| 6 | 2               | ecrans, ultimo                       |
+| 6 | 3               | dragon, mythes, public               |
+| 6 | 4               | bridge, champs, flaque, voyant       |
+| 7 | 2               | inculpe, motards                     |
+| 7 | 3               | camping, devront, humbles            |
+| 7 | 4               | abdomen, facheux, typique, verglas   |
+| 8 | 2               | mouchard, plaintes                   |
+| 8 | 3               | archives, bitumage, plafonds         |
+| 9 | 2               | degauchir, longtemps                 |
 
 ### English
 
