@@ -3,6 +3,7 @@ import enum
 import numpy as np
 import common as cmn
 import coordinatus as co
+from riddle import IRiddle
 
 class Orientation(enum.Enum):
     HORIZONTAL = 'H'
@@ -16,13 +17,12 @@ class CellState(enum.Enum):
     AVAILABLE_VERTICAL = 4
 
 @dataclasses.dataclass
-class Letter:
+class LetterCoord:
     pos_xy: co.Point
     orientation: Orientation
     char: str = ""
 
-
-class CrossWord:
+class WordCoord:
     def __init__(self, word: str, pos_xy: co.Point, orientation: Orientation):
         self.word = word
         self.orientation = orientation
@@ -54,8 +54,8 @@ class CrossWord:
         board_pos_xy = pos.coords.round().astype(int).tolist()
         return board_pos_xy
 
-    def __eq__(self, other: 'CrossWord'):
-        if not isinstance(other, CrossWord):
+    def __eq__(self, other: 'WordCoord'):
+        if not isinstance(other, WordCoord):
             return NotImplemented
         return (self.word == other.word and
                 self.pos_xy == other.pos_xy and
@@ -89,12 +89,12 @@ class CrossWord:
 
         return CellState.FILLED, self.word[x]
 
-    def letters(self) -> list[Letter]:
+    def letters(self) -> list[LetterCoord]:
         """Get all letters with their positions and orientations."""
         letters = []
         for idx, char in enumerate(self.word):
             letters.append(
-                Letter(
+                LetterCoord(
                     co.Point([idx, 0], self.local_frame).to_absolute(),
                     self.orientation,
                     char,
@@ -102,16 +102,16 @@ class CrossWord:
 
         return letters
 
-    def get_pre_padding(self) -> Letter:
+    def get_pre_padding(self) -> LetterCoord:
         board_pos = co.Point((-1, 0), self.local_frame).to_absolute()
-        return Letter(board_pos, self.orientation, "0")
+        return LetterCoord(board_pos, self.orientation, "0")
 
-    def get_post_padding(self) -> Letter:
+    def get_post_padding(self) -> LetterCoord:
         board_pos = co.Point((len(self.word), 0), self.local_frame).to_absolute()
-        return Letter(board_pos, self.orientation, "0")
+        return LetterCoord(board_pos, self.orientation, "0")
 
         
-    def find_cross_points(self, other_word: str) -> list['CrossWord']:
+    def find_cross_points(self, other_word: str) -> list['WordCoord']:
         """Find cross points between this word and another word."""
         cross_points = []
         other_orientation = Orientation.VERTICAL if self.orientation == Orientation.HORIZONTAL else Orientation.HORIZONTAL
@@ -120,22 +120,22 @@ class CrossWord:
             for j, char2 in enumerate(other_word):
                 if char1 == char2:
                     board_pos = co.Point([i, -j], self.local_frame).to_absolute()
-                    cross_points.append(CrossWord(other_word, board_pos, other_orientation))
+                    cross_points.append(WordCoord(other_word, board_pos, other_orientation))
         return cross_points
     
         
 class CrossWordsBoard:
     def __init__(self):
-        self.placements: list[CrossWord] = []
+        self.word_coords: list[WordCoord] = []
         self.revealed_placements: list[bool] = []
 
-    def is_valid_placement(self, new_word: CrossWord) -> bool:
+    def is_valid_placement(self, new_word: WordCoord) -> bool:
         """Check if a crossword placement is valid on the board."""
 
         letters = [new_word.get_pre_padding()] + new_word.letters() + [new_word.get_post_padding()]
 
         for letter in letters:
-            for crossword in self.placements:
+            for crossword in self.word_coords:
                 crossword_state, crossword_char = crossword.char_at_grid_pos(letter.pos_xy)
 
                 if crossword_state == CellState.BLOCKED:
@@ -152,22 +152,22 @@ class CrossWordsBoard:
 
         return True
 
-    def add_word(self, word: CrossWord):
-        self.placements.append(word)
+    def add_word(self, word: WordCoord) -> None:
+        self.word_coords.append(word)
         self.revealed_placements.append(False)
 
-    def reveal_word(self, word: str):
-        for idx, placement in enumerate(self.placements):
+    def reveal_word(self, word: str) -> None:
+        for idx, placement in enumerate(self.word_coords):
             if placement.word == word:
                 self.revealed_placements[idx] = True
-        return
+        
 
-    def compute_new_word_placements(self, word: str):
-        if len(self.placements) == 0:
-            return [CrossWord(word, co.Point([0, 0]), Orientation.HORIZONTAL)]
+    def compute_new_word_coordinates(self, word: str) -> list[WordCoord]:
+        if len(self.word_coords) == 0:
+            return [WordCoord(word, co.Point([0, 0]), Orientation.HORIZONTAL)]
 
-        valid_crossword_positions: list[CrossWord] = []
-        for crossword in self.placements:
+        valid_crossword_positions: list[WordCoord] = []
+        for crossword in self.word_coords:
             valid_crossword_positions += crossword.find_cross_points(word)
 
         # filter valid placements
@@ -177,7 +177,7 @@ class CrossWordsBoard:
 
     def get_char(self, pos_xy: co.Point) -> str:
         """Get character at given position from any word placement."""
-        for placement in self.placements:
+        for placement in self.word_coords:
             cellstate, char = placement.char_at_grid_pos(pos_xy)
             if cellstate == CellState.FILLED:
                 return char
@@ -185,10 +185,10 @@ class CrossWordsBoard:
 
     def compute_board_bounds(self) -> tuple[int, int, int, int]:
         """Compute the bounding box of the current board."""
-        if not self.placements:
+        if not self.word_coords:
             return 0, 0, 0, 0
 
-        letters = [letter for placement in self.placements for letter in placement.letters()]
+        letters = [letter for placement in self.word_coords for letter in placement.letters()]
 
         min_x = int(round(min(letter.pos_xy[0] for letter in letters)))
         max_x = int(round(max(letter.pos_xy[0] for letter in letters)))
@@ -199,7 +199,7 @@ class CrossWordsBoard:
 
     def render_revealed_board_txt(self) -> np.ndarray:
         """Display the current state of the board."""
-        if not self.placements:
+        if not self.word_coords:
             print("Board is empty.")
             return np.array([[]])
 
@@ -210,7 +210,7 @@ class CrossWordsBoard:
         height = max_y - min_y + 1
         board_array = np.full((height, width), ".", dtype=str)
 
-        letters = [letter for placement in self.placements for letter in placement.letters()]
+        letters = [letter for placement in self.word_coords for letter in placement.letters()]
         for letter in letters:
             pos_xy = letter.pos_xy.relative_to(board_frame)
             x, y = pos_xy.coords.round().astype(int)
@@ -219,7 +219,7 @@ class CrossWordsBoard:
         return board_array
 
     def render_board_mask_bool(self) -> np.ndarray:
-        if not self.placements:
+        if not self.word_coords:
             print("Board is empty.")
             return np.array([[]])
 
@@ -228,7 +228,7 @@ class CrossWordsBoard:
         width = max_x - min_x + 1
         height = max_y - min_y + 1
         board_mask = np.full((height, width), False, dtype=bool)
-        for revealed, word in zip(self.revealed_placements, self.placements):
+        for revealed, word in zip(self.revealed_placements, self.word_coords):
             if not revealed:
                 continue
             for letter in word.letters():
@@ -250,16 +250,16 @@ class IModel:
     def similarity(self, word1: str, word2: str) -> float:
         pass
 
-class CrossWordsGenerator:
+class CrossWordsGame:
     def __init__(self, board: CrossWordsBoard, model: IModel, size: int):
         self.board = board
         self.model = model
         self.size = size
 
         sorted_words, similarity_map = self.load_words(self.model)
-        self.root_word = sorted_words[0]
-        self.sorted_words = sorted_words
-        self.similarity_map = similarity_map
+        self.root_word: str = sorted_words[0]
+        self.sorted_words: list[str] = sorted_words
+        self.similarity_map: dict[str, float] = similarity_map
 
         self.generate_game()
 
@@ -276,10 +276,10 @@ class CrossWordsGenerator:
         frequent_words = cmn.load_most_frequent_words(model=model)
 
         # filter out words shorter than 3 characters
-        frequent_words = [word for word in frequent_words if len(word) >= 3]
+        frequent_words: list[str] = [word for word in frequent_words if len(word) >= 3]
 
         # Choose a root word at random from the frequent words
-        root_word = np.random.choice(frequent_words)
+        root_word: str = np.random.choice(frequent_words)
 
         # sort all words by their similarity to the root word
         print("Sorting words by similarity to root word:", root_word)
@@ -290,51 +290,51 @@ class CrossWordsGenerator:
 
     def generate_game(self):
         placed_words = []
-        while len(self.board.placements) < self.size:
+        while len(self.board.word_coords) < self.size:
             # find the first word in sorted_words that is not already on the board
             word = None
-            candidate_positions: list[CrossWord] = []
+            candidate_word_coords: list[WordCoord] = []
             for candidate_word in self.sorted_words:
                 if candidate_word not in placed_words :
                     word = candidate_word
 
                     # Compute candidate placements for the new word
-                    candidate_positions = self.board.compute_new_word_placements(word)
+                    candidate_word_coords = self.board.compute_new_word_coordinates(word)
                     print(f"Candidates for '{word}':")
-                    for candidate in candidate_positions:
+                    for candidate in candidate_word_coords:
                         print("\t", candidate)
-                    if len(candidate_positions) == 0:
+                    if len(candidate_word_coords) == 0:
                         print(f"No valid placements for '{word}'. Skipping.")
                         continue
 
                     break
 
-            if candidate_positions:
+            if candidate_word_coords:
                 # Group by candidate duplicates. choose in priority candidates with most duplicates.
                 # This favors placements that cross multiple words, making the game easier to solve
-                candidate_count: dict[int, list[CrossWord]] = {}
-                for candidate in candidate_positions:
-                    count = sum(1 for other in candidate_positions if other == candidate)
+                candidate_count: dict[int, list[WordCoord]] = {}
+                for candidate in candidate_word_coords:
+                    count = sum(1 for other in candidate_word_coords if other == candidate)
                     if count not in candidate_count:
                         candidate_count[count] = []
                     candidate_count[count].append(candidate)
 
                     max_count = max(candidate_count.keys())
-                    candidate_positions = candidate_count[max_count]
+                    candidate_word_coords = candidate_count[max_count]
 
-            new_crossword = np.random.choice(candidate_positions) if candidate_positions else None
+            new_crossword = np.random.choice(candidate_word_coords) if candidate_word_coords else None
             self.board.add_word(new_crossword)
             placed_words.append(word)
 
 def run_game():
-    game = CrossWordsGenerator(
+    game = CrossWordsGame(
         CrossWordsBoard(),
         cmn.load_model(),
         size=10,
     )
 
     # reveal the first word
-    game.board.reveal_word(game.board.placements[0].word)
+    game.board.reveal_word(game.board.word_coords[0].word)
     # previous_board_str = None
     while True:
         board_str = game.board.render_board_txt()

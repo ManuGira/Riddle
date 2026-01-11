@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 
-class IRiddle(ABC):
+class RiddleGame(ABC):
     """
     Interface for Wordle-like games.
     

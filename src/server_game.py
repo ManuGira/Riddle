@@ -9,13 +9,13 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
 from pathlib import Path
-from riddle_interface import IRiddle
+from riddle import RiddleGame
 
 
 class GameServer:
     """Game-agnostic server that works with any IGamle implementation."""
     
-    def __init__(self, game: IRiddle, secret_key: str = "your-secret-key-change-this-in-production"):
+    def __init__(self, game: RiddleGame, secret_key: str = "your-secret-key-change-this-in-production"):
         """
         Initialize server with a game instance.
         
