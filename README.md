@@ -28,12 +28,12 @@ This installs the `riddle` module, making it available to all scripts in the pro
 | 5 | 4               | clamp, hebdo, jurys, vingt           |
 | 6 | 2               | ecrans, ultimo                       |
 | 6 | 3               | dragon, mythes, public               |
-| 6 | 4               | bridge, champs, flaque, voyant       |
+| 6 | 4               | bijoux, champs, devint, frugal       |
 | 7 | 2               | inculpe, motards                     |
-| 7 | 3               | camping, devront, humbles            |
-| 7 | 4               | abdomen, facheux, typique, verglas   |
+| 7 | 3               | chomage, devants, publier            |
+| 7 | 4               | drogman, flechir, paquets, verbaux   |
 | 8 | 2               | mouchard, plaintes                   |
-| 8 | 3               | archives, bitumage, plafonds         |
+| 8 | 3               | bucheron, domptage, festival         |
 | 9 | 2               | degauchir, longtemps                 |
 
 ### English

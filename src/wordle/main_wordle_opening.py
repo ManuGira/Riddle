@@ -98,9 +98,39 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
             for i in words_with_letter:
                 solver.Add(y[letter] >= x[i])
 
+    # Create binary variables for each (letter, position) pair to track unique positions
+    # z[letter][pos] = 1 if letter appears at position pos in exactly one selected word
+    max_word_length = df_words["word"].str.len().max()
+    z = {}
+    for letter in letters:
+        z[letter] = {}
+        for pos in range(max_word_length):
+            z[letter][pos] = solver.BoolVar(f"z_{letter}_{pos}")
+            
+            # Find words that have this letter at this position
+            words_with_letter_at_pos = [
+                i for i in df_words.index
+                if len(df_words.loc[i, "word"]) > pos and df_words.loc[i, "word"][pos] == letter
+            ]
+            
+            if words_with_letter_at_pos:
+                # z[letter][pos] = 1 only if exactly one word with letter at pos is selected
+                # This means: sum of x[i] for matching words <= 1, and z <= that sum
+                solver.Add(sum(x[i] for i in words_with_letter_at_pos) <= 1)
+                solver.Add(z[letter][pos] <= sum(x[i] for i in words_with_letter_at_pos))
+                # Force z to be 1 if exactly one matching word is selected
+                for i in words_with_letter_at_pos:
+                    solver.Add(z[letter][pos] >= x[i] - sum(x[j] for j in words_with_letter_at_pos if j != i))
+            else:
+                # No words have this letter at this position, z must be 0
+                solver.Add(z[letter][pos] == 0)
+
     # Objective: maximize the sum of frequencies of distinct letters used
+    # Plus a small bonus (1/1000) for each unique (letter, position) pair
+    position_bonus = 0.001
     solver.Maximize(
-        sum(frequency_map[letter] * y[letter] for letter in letters)
+        sum(frequency_map[letter] * y[letter] for letter in letters) +
+        position_bonus * sum(z[letter][pos] for letter in letters for pos in range(max_word_length))
     )
 
     status = solver.Solve()
@@ -120,9 +150,35 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
         distinct_letter_count = len(all_letters)
         total_frequency = sum(frequency_map[letter] for letter in all_letters)
         
+        # Calculate unique position count
+        unique_position_count = sum(
+            z[letter][pos].solution_value() 
+            for letter in letters 
+            for pos in range(max_word_length)
+        )
+        
+        # Find position overlaps for reporting
+        position_overlaps = []
+        for pos in range(max_word_length):
+            letter_at_pos = {}
+            for word in selected_words:
+                if pos < len(word):
+                    letter = word[pos]
+                    if letter not in letter_at_pos:
+                        letter_at_pos[letter] = []
+                    letter_at_pos[letter].append(word)
+            for letter, words in letter_at_pos.items():
+                if len(words) > 1:
+                    position_overlaps.append((pos, letter, words))
+        
         print("Optimal words: ", selected_words)
         print(f"Distinct letters: {distinct_letter_count} ({', '.join(sorted(all_letters))})")
         print(f"Total frequency score: {total_frequency:.4f}")
+        print(f"Unique letter positions: {int(unique_position_count)}")
+        if position_overlaps:
+            print("Position overlaps:")
+            for pos, letter, words in position_overlaps:
+                print(f"  Position {pos}: '{letter}' in {words}")
     else:
         print("No optimal solution found.")
 
