@@ -1,9 +1,73 @@
 from riddle_game import RiddleGame
+from game_state import GameState
 import hashlib
 from pathlib import Path
 from server_game import GameServer
 from typing import Any
+from dataclasses import dataclass, field, asdict
 import sys
+
+
+@dataclass
+class GuessResult:
+    """Result of a single guess."""
+    word: str
+    hints: list[dict[str, str]]  # [{'letter': 'A', 'status': 'correct'}, ...]
+    is_correct: bool
+
+
+@dataclass
+class WordleState(GameState):
+    """Game state for Wordle."""
+    guesses: list[GuessResult] = field(default_factory=list)
+    attempts: int = 0
+    max_attempts: int = 6
+    won: bool = False
+    lost: bool = False
+    game_over: bool = False
+    
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for JWT encoding."""
+        return {
+            'guesses': [
+                {
+                    'word': g.word,
+                    'hints': g.hints,
+                    'is_correct': g.is_correct
+                }
+                for g in self.guesses
+            ],
+            'attempts': self.attempts,
+            'max_attempts': self.max_attempts,
+            'won': self.won,
+            'lost': self.lost,
+            'game_over': self.game_over
+        }
+    
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'WordleState':
+        """Reconstruct from dictionary (from JWT)."""
+        guesses = [
+            GuessResult(
+                word=g['word'],
+                hints=g['hints'],
+                is_correct=g['is_correct']
+            )
+            for g in data.get('guesses', [])
+        ]
+        
+        return cls(
+            guesses=guesses,
+            attempts=data.get('attempts', 0),
+            max_attempts=data.get('max_attempts', 6),
+            won=data.get('won', False),
+            lost=data.get('lost', False),
+            game_over=data.get('game_over', False)
+        )
+    
+    def is_game_over(self) -> bool:
+        """Check if game is over."""
+        return self.game_over
 
 
 class WordleGame(RiddleGame):
@@ -42,23 +106,16 @@ class WordleGame(RiddleGame):
         hash_val = int(hashlib.sha256((date_str + self.secret_key).encode()).hexdigest(), 16)
         return self.word_list[hash_val % len(self.word_list)]
     
-    def create_game_state(self) -> dict:
+    def create_game_state(self) -> WordleState:
         """
         Create initial game state.
         
         Returns:
-            New game state dictionary
+            New WordleState instance
         """
-        return {
-            'guesses': [],
-            'attempts': 0,
-            'max_attempts': self.MAX_ATTEMPTS,
-            'won': False,
-            'lost': False,
-            'game_over': False
-        }
+        return WordleState(max_attempts=self.MAX_ATTEMPTS)
     
-    def check_guess(self, guess: str, game_state: dict | None = None) -> dict:
+    def check_guess(self, guess: str, game_state: WordleState | None = None) -> WordleState:
         """
         Check a guess against the secret word and update game state.
         
@@ -67,15 +124,7 @@ class WordleGame(RiddleGame):
             game_state: Current game state (creates new if None)
             
         Returns:
-            Updated game state with new guess result:
-            {
-                'guesses': [{'word': str, 'hints': [...], 'is_correct': bool}, ...],
-                'attempts': int,
-                'max_attempts': int,
-                'won': bool,
-                'lost': bool,
-                'game_over': bool
-            }
+            Updated WordleState instance
             
         Raises:
             ValueError: If guess is invalid or game is already over
@@ -84,12 +133,18 @@ class WordleGame(RiddleGame):
         if game_state is None:
             game_state = self.create_game_state()
         else:
-            # Create a copy to avoid mutation
-            game_state = game_state.copy()
-            game_state['guesses'] = game_state['guesses'].copy()
+            # Create a copy to avoid mutation (dataclass is mutable)
+            game_state = WordleState(
+                guesses=game_state.guesses.copy(),
+                attempts=game_state.attempts,
+                max_attempts=game_state.max_attempts,
+                won=game_state.won,
+                lost=game_state.lost,
+                game_over=game_state.game_over
+            )
         
         # Check if game is over
-        if game_state['game_over']:
+        if game_state.is_game_over():
             raise ValueError("Game is already over")
         
         guess = guess.upper().strip()
@@ -129,23 +184,23 @@ class WordleGame(RiddleGame):
         
         # Create guess result
         is_correct = guess == secret
-        guess_result = {
-            'word': guess,
-            'hints': hints,
-            'is_correct': is_correct
-        }
+        guess_result = GuessResult(
+            word=guess,
+            hints=hints,
+            is_correct=is_correct
+        )
         
         # Update game state
-        game_state['guesses'].append(guess_result)
-        game_state['attempts'] += 1
+        game_state.guesses.append(guess_result)
+        game_state.attempts += 1
         
         # Check win/loss conditions
         if is_correct:
-            game_state['won'] = True
-            game_state['game_over'] = True
-        elif game_state['attempts'] >= game_state['max_attempts']:
-            game_state['lost'] = True
-            game_state['game_over'] = True
+            game_state.won = True
+            game_state.game_over = True
+        elif game_state.attempts >= game_state.max_attempts:
+            game_state.lost = True
+            game_state.game_over = True
         
         return game_state
 

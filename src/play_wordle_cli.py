@@ -3,21 +3,25 @@ Command-line Wordle game.
 Play Wordle directly in your terminal.
 """
 
-from main_wordle_game import WordleGame
+import dataclasses
+from main_wordle_game import WordleGame, WordleState
 from pathlib import Path
 from datetime import datetime
 import sys
 
-
-class WordleCLI:
-    """Terminal-based Wordle game interface."""
-    
+@dataclasses.dataclass
+class Colors:
     # ANSI color codes for terminal output
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
+    GOOD = '\033[102m'
+    WARNING = '\033[103m'
+    BAD = '\033[101m'
     GRAY = '\033[90m'
     RESET = '\033[0m'
     BOLD = '\033[1m'
+
+
+class WordleCLI:
+    """Terminal-based Wordle game interface."""
     
     def __init__(self, game: WordleGame):
         """
@@ -26,8 +30,8 @@ class WordleCLI:
         Args:
             game: WordleGame instance for today
         """
-        self.game = game
-        self.game_state = game.create_game_state()
+        self.game: WordleGame = game
+        self.game_state: WordleState = game.create_game_state()
     
     def colorize_hint(self, letter: str, status: str) -> str:
         """
@@ -41,34 +45,33 @@ class WordleCLI:
             Colored letter string
         """
         if status == 'correct':
-            return f"{self.GREEN}{self.BOLD}{letter}{self.RESET}"
+            return f"{Colors.GOOD}{Colors.BOLD}{letter}{Colors.RESET}"
         elif status == 'present':
-            return f"{self.YELLOW}{self.BOLD}{letter}{self.RESET}"
+            return f"{Colors.WARNING}{Colors.BOLD}{letter}{Colors.RESET}"
         else:  # absent
-            return f"{self.GRAY}{letter}{self.RESET}"
+            return f"{Colors.GRAY}{letter}{Colors.RESET}"
     
-    def display_guess(self, guess_result: dict):
+    def display_guess(self, guess_result):
         """Display a guess with colored hints."""
         colored_letters = []
-        for hint in guess_result['hints']:
-            colored_letters.append(self.colorize_hint(hint['letter'], hint['status']))
+        for hint in guess_result.hints:
+            colored_letters.append(self.colorize_hint(f" {hint['letter']} ", hint['status']))
         
-        print("  " + " ".join(colored_letters))
+        print("  " + "".join(colored_letters))
     
     def display_board(self):
         """Display the current game board."""
-        state = self.game_state
         print("\n" + "="*40)
-        print(f"  WORDLE - Attempt {state['attempts']}/{state['max_attempts']}")
+        print(f"  WORDLE - Attempt {self.game_state.attempts}/{self.game_state.max_attempts}")
         print("="*40)
         
         # Show all previous guesses
-        for guess_result in state['guesses']:
+        for guess_result in self.game_state.guesses:
             self.display_guess(guess_result)
         
         # Show remaining empty rows
-        for _ in range(state['max_attempts'] - len(state['guesses'])):
-            print("  _ _ _ _ _")
+        for _ in range(self.game_state.max_attempts - len(self.game_state.guesses)):
+            print("   _  _  _  _  _")
         
         print()
     
@@ -108,15 +111,15 @@ class WordleCLI:
     def play(self):
         """Main game loop."""
         print("\n" + "🎮 "*10)
-        print(f"{self.BOLD}WELCOME TO WORDLE!{self.RESET}")
+        print(f"{Colors.BOLD}WELCOME TO WORDLE!{Colors.RESET}")
         print("🎮 "*10)
         
         print(f"\n📅 Today's date: {self.game.date}")
-        print(f"🎯 You have {self.game_state['max_attempts']} attempts to guess the word")
+        print(f"🎯 You have {self.game_state.max_attempts} attempts to guess the word")
         
         self.display_legend()
         
-        while not self.game_state['game_over']:
+        while not self.game_state.is_game_over():
             self.display_board()
             
             # Get guess from player
@@ -127,9 +130,9 @@ class WordleCLI:
                 self.game_state = self.game.check_guess(guess, self.game_state)
                 
                 # Check if game ended
-                if self.game_state['game_over']:
+                if self.game_state.is_game_over():
                     self.display_board()
-                    if self.game_state['won']:
+                    if self.game_state.won:
                         self.display_victory()
                     else:
                         self.display_defeat()
@@ -141,21 +144,20 @@ class WordleCLI:
     
     def display_victory(self):
         """Display victory message."""
-        state = self.game_state
         print("\n" + "🎉 "*15)
-        print(f"{self.GREEN}{self.BOLD}CONGRATULATIONS! YOU WON!{self.RESET}")
+        print(f"{Colors.GOOD}{Colors.BOLD}CONGRATULATIONS! YOU WON!{Colors.RESET}")
         print("🎉 "*15)
-        print(f"\n✨ You guessed the word in {state['attempts']}/{state['max_attempts']} attempts!")
-        print(f"🎯 The word was: {self.BOLD}{self.game.secret}{self.RESET}\n")
+        print(f"\n✨ You guessed the word in {self.game_state.attempts}/{self.game_state.max_attempts} attempts!")
+        print(f"🎯 The word was: {Colors.BOLD}{self.game.secret}{Colors.RESET}\n")
     
     def display_defeat(self):
         """Display defeat message."""
         state = self.game_state
         print("\n" + "💔 "*15)
-        print(f"{self.GRAY}GAME OVER{self.RESET}")
+        print(f"{Colors.GRAY}GAME OVER{Colors.RESET}")
         print("💔 "*15)
-        print(f"\n😔 You've used all {state['max_attempts']} attempts.")
-        print(f"🎯 The word was: {self.BOLD}{self.game.secret}{self.RESET}\n")
+        print(f"\n😔 You've used all {self.game_state.max_attempts} attempts.")
+        print(f"🎯 The word was: {Colors.BOLD}{self.game.secret}{Colors.RESET}\n")
         print("Better luck next time! 💪\n")
 
 
