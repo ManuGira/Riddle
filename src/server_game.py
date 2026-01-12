@@ -1,6 +1,6 @@
 """
 Stateless Wordle-like game server using JWT for session management.
-Completely game-agnostic - works with any IGamle implementation.
+Completely game-agnostic - works with any RiddleGame implementation.
 """
 
 from fastapi import FastAPI, HTTPException
@@ -9,27 +9,55 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
 from pathlib import Path
-from riddle import RiddleGame
+from riddle_game import RiddleGame
+from typing import Callable
 
 
 class GameServer:
-    """Game-agnostic server that works with any IGamle implementation."""
+    """Game-agnostic server that works with any RiddleGame implementation."""
     
-    def __init__(self, game: RiddleGame, secret_key: str = "your-secret-key-change-this-in-production"):
+    def __init__(
+        self, 
+        game_factory: Callable[[str], RiddleGame],
+        secret_key: str = "your-secret-key-change-this-in-production"
+    ):
         """
-        Initialize server with a game instance.
+        Initialize server with a game factory.
         
         Args:
-            game: Any object implementing the IGamle interface
+            game_factory: Callable that takes a date string and returns a RiddleGame instance
             secret_key: JWT signing key (change in production)
         """
-        self.game = game
+        self.game_factory = game_factory
         self.secret_key = secret_key
         self.algorithm = "HS256"
         self.app = FastAPI()
+        
+        # Cache game instances by date (max 7 days)
+        self._game_cache: dict[str, RiddleGame] = {}
+        
         self._setup_routes()
     
-    def get_today_date(self) -> str:
+    def get_game_for_date(self, date_str: str) -> RiddleGame:
+        """
+        Get or create a game instance for a specific date.
+        
+        Args:
+            date_str: Date in format "YYYY-MM-DD"
+            
+        Returns:
+            RiddleGame instance for that date (cached)
+        """
+        if date_str not in self._game_cache:
+            # Create new game instance for this date
+            self._game_cache[date_str] = self.game_factory(date_str)
+            
+            # Prevent memory leak: keep only last 7 days
+            if len(self._game_cache) > 7:
+                oldest_date = min(self._game_cache.keys())
+                del self._game_cache[oldest_date]
+        
+        return self._game_cache[date_str]
         """Get today's date as string."""
         return datetime.now().strftime("%Y-%m-%d")
     
@@ -131,22 +159,22 @@ class GameServer:
             if state["attempts"] >= 6:
                 state["completed"] = True
                 state["won"] = False
-                # Use game instance to get cached challenge
-                secret_word = self.game.get_daily_challenge(state["date"])
+                # Get game instance for this date
+                game = self.get_game_for_date(state["date"])
                 return GuessResponse(
                     result={},
                     state=state,
                     token=self.create_token(state),
                     game_over=True,
-                    message=f"Game over! The word was: {secret_word}"
+                    message=f"Game over! The word was: {game.secret}"
                 )
             
-            # Get today's secret word (cached inside game instance)
-            secret_word = self.game.get_daily_challenge(state["date"])
+            # Get game instance for today (cached)
+            game = self.get_game_for_date(state["date"])
             
-            # Process the guess using game instance
+            # Process the guess (game has its own secret)
             try:
-                result = self.game.check_guess(request.guess, secret_word)
+                result = game.check_guess(request.guess)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             
@@ -163,7 +191,7 @@ class GameServer:
             elif state["attempts"] >= 6:
                 state["completed"] = True
                 state["won"] = False
-                message = f"Game over! The word was: {secret_word}"
+                message = f"Game over! The word was: {game.secret}"
                 game_over = True
             else:
                 message = f"Attempt {state['attempts']}/6"
@@ -193,7 +221,10 @@ class GameServer:
         """Run the server."""
         import uvicorn
         print(f"Starting game server...")
-        print(f"Game type: {type(self.game).__name__}")
+        print(f"Game factory ready")
         print(f"Today's date: {self.get_today_date()}")
+        # Create today's game to show secret
+        today_game = self.get_game_for_date(self.get_today_date())
+        print(f"Today's secret (for testing): {today_game.secret}")
         uvicorn.run(self.app, host=host, port=port)
 

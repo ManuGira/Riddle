@@ -4,7 +4,7 @@
 
 Stateless game server using **FastAPI** + **JWT tokens** for session management. No database required.
 
-**Key optimization**: Daily challenges are cached to avoid expensive regeneration on every guess.
+**Key optimization**: Server caches game instances (one per date) to avoid expensive regeneration on every guess.
 
 ## Architecture Principle
 
@@ -14,13 +14,19 @@ Stateless game server using **FastAPI** + **JWT tokens** for session management.
 Client → Server (with JWT) → Process → Server → Client (with new JWT)
 ```
 
+**Instance-per-Date**: Server maintains a cache of game instances, one for each date.
+
+```
+Server creates/retrieves: GameInstance("2026-01-12") → each instance stores its secret
+```
+
 ## File Structure
 
 ```
 src/
   server_game.py           # Game-agnostic FastAPI server (GameServer class)
-  gamle.py                 # IGamle interface for game implementations
-  simple_wordle_game.py    # Example Wordle implementation
+  riddle_game.py           # RiddleGame interface for game implementations
+  main_wordle_game.py      # Example Wordle implementation
 static/
   index.html              # Frontend (HTML + JavaScript)
 ```
@@ -34,41 +40,60 @@ static/
 3. **Token storage**: Client saves JWT in `localStorage`
 4. **Token expiration**: Automatic at midnight (resets daily challenge)
 
-### 2. Daily Challenge System with Caching
+### 2. Daily Challenge System with Server-Side Instance Caching
 
-**Challenge caching is handled internally by the game instance:**
+**Server caches game instances, not challenges:**
 
 ```python
-class SimpleWordleGame(IGamle):
-    def __init__(self):
-        super().__init__()  # Initializes internal _challenge_cache
-        self.word_list = WORD_LIST
+class GameServer:
+    def __init__(self, game_factory: Callable[[str], RiddleGame], ...):
+        # Cache of game instances by date
+        self._game_cache: dict[str, RiddleGame] = {}
+        self.game_factory = game_factory
     
-    def _generate_challenge(self, date_str: str) -> str:
-        """Called only once per date, then cached."""
-        hash_val = int(hashlib.sha256(date_str.encode()).hexdigest(), 16)
-        return self.word_list[hash_val % len(self.word_list)]
+    def get_game_for_date(self, date_str: str) -> RiddleGame:
+        """Get or create a game instance for a specific date."""
+        if date_str not in self._game_cache:
+            # Create NEW instance for this date
+            self._game_cache[date_str] = self.game_factory(date_str)
+            
+            # Keep only last 7 days
+            if len(self._game_cache) > 7:
+                oldest_date = min(self._game_cache.keys())
+                del self._game_cache[oldest_date]
+        
+        return self._game_cache[date_str]
 
-# Create single game instance at server startup
-game = SimpleWordleGame()
-
-# Use throughout the application
-secret = game.get_daily_challenge("2026-01-08")  # Generated and cached
-secret = game.get_daily_challenge("2026-01-08")  # Returns cached value
+# Usage in endpoints:
+game = server.get_game_for_date("2026-01-12")  # Creates or retrieves instance
+result = game.check_guess(player_guess)        # Uses game's stored secret
 ```
 
-**Why instance-based caching?**
+**Game instance structure:**
+
+```python
+class RiddleGame:
+    def __init__(self, date_str: str):
+        self._date = date_str
+        self._secret = self._generate_challenge(date_str)  # Generated once
+    
+    def check_guess(self, guess: str) -> dict:
+        # Uses self._secret (no need to pass it around)
+        ...
+```
+
+**Why server-side instance caching?**
+- **Single Responsibility**: Server manages caching, game manages game logic
+- **One instance = One date's game**: Each `RiddleGame` instance stores ONE secret
 - Challenge generation can be CPU-intensive for complex games
-- Game instance stores cache internally (`self._challenge_cache`)
-- Single instance created at server startup, persists through all requests
-- **Generated once per day** on first request, cached for all subsequent requests
-- Cleaner OOP design - cache is encapsulated in the game class
+- **Generated once** when instance created, then reused for all guesses
+- Cleaner separation: caching concern in server, not in game
 
 **Cache behavior:**
-- First request of the day: calls `_generate_challenge()` and caches
-- All other requests: instant lookup from `self._challenge_cache`
-- Automatic cleanup: keeps max 7 days
-- Thread-safe for single-process servers
+- First request for a date: creates `RiddleGame(date)` instance, stores in cache
+- Subsequent requests: retrieves existing instance from cache
+- Automatic cleanup: keeps max 7 date instances
+- Each instance knows its own secret via `self._secret`
 
 ### 3. JWT Token Structure
 
@@ -98,86 +123,130 @@ secret = game.get_daily_challenge("2026-01-08")  # Returns cached value
 
 ## Game Logic (Customizable)
 
-### IGamle Interface
+### RiddleGame Interface
 
-Games implement the `IGamle` interface in [src/gamle.py](../src/gamle.py):
+Games implement the `RiddleGame` interface in [src/riddle_game.py](../src/riddle_game.py):
 
 ```python
-class IGamle(ABC):
-    def __init__(self):
-        """Initialize with internal challenge cache."""
-        self._challenge_cache: dict[str, str] = {}
+class RiddleGame(ABC):
+    """
+    Each instance represents ONE game for ONE specific date.
+    Server caches multiple instances (one per date).
+    """
     
-    def get_daily_challenge(self, date_str: str) -> str:
+    def __init__(self, date_str: str):
         """
-        Public method: Get challenge (cached internally).
-        You DON'T override this - it handles caching automatically.
+        Create game instance for a specific date.
+        Generates and stores the secret during initialization.
         """
-        if date_str not in self._challenge_cache:
-            self._challenge_cache[date_str] = self._generate_challenge(date_str)
-            # Auto-cleanup: keep only 7 days
-        return self._challenge_cache[date_str]
+        self._date = date_str
+        self._secret = self._generate_challenge(date_str)
     
     @abstractmethod
     def _generate_challenge(self, date_str: str) -> str:
         """
-        Internal method: Generate challenge for a date.
-        You MUST implement this - called once per date, then cached.
-        Put your expensive generation logic here.
+        Generate the secret for this date.
+        Called ONCE during __init__ - implement your expensive logic here.
+        Must be deterministic (same date = same secret).
         """
         pass
     
+    @property
+    def secret(self) -> str:
+        """Get this game's secret."""
+        return self._secret
+    
     @abstractmethod
-    def check_guess(self, guess: str, secret: str) -> dict[str, Any]:
-        """Process a guess and return hints."""
+    def check_guess(self, guess: str) -> dict[str, Any]:
+        """
+        Process a guess using self._secret.
+        No need to pass secret - it's stored in the instance.
+        """
         pass
 ```
 
-**How it works:**
-1. Server calls `game.get_daily_challenge(date)` (public method)
-2. If not cached → calls `game._generate_challenge(date)` (your implementation)
-3. Result is cached in `self._challenge_cache`
-4. Next request for same date → returns cached value instantly
-
-**Why two methods?**
-- `get_daily_challenge()`: Handles caching (don't override)
-- `_generate_challenge()`: Your expensive logic (must implement)
-
-This separates concerns: base class handles caching, you implement generation.
+**Key concepts:**
+- **One instance = One date**: `RiddleGame("2026-01-12")` is the game for Jan 12
+- **Secret stored in instance**: `self._secret` set during `__init__`
+- **No caching in game**: Server handles caching instances
+- **Simple API**: `check_guess(guess)` - secret already known
 
 ### Current Implementation
 
-Example in [simple_wordle_game.py](../src/simple_wordle_game.py):
+Example in [main_wordle_game.py](../src/main_wordle_game.py):
 
 ```python
-class SimpleWordleGame(IGamle):
+class WordleGame(RiddleGame):
+    """Each instance is for one specific date."""
+    
+    def __init__(self, date_str: str, words_file: Path, secret_key: str):
+        """
+        Create game for specific date.
+        
+        Args:
+            date_str: Date for this game
+            words_file: Path to word list (can change per instance)
+            secret_key: Secret key for word selection (KEEP PRIVATE!)
+        """
+        self.words_file = words_file
+        self.secret_key = secret_key
+        
+        # Load word list fresh (allows updates without restart)
+        with open(words_file, "r") as f:
+            words = [w.strip().upper() for w in f if len(w.strip()) == 5]
+        self.word_list = [w for w in words if w.isalpha()]
+        
+        super().__init__(date_str)  # Generates secret
+    
     def _generate_challenge(self, date_str: str) -> str:
-        """
-        Called by get_daily_challenge() when cache miss.
-        Generates word using deterministic hash.
-        """
-        hash_val = int(hashlib.sha256(date_str.encode()).hexdigest(), 16)
+        """Generate secret using deterministic hash with secret_key."""
+        hash_val = int(hashlib.sha256((date_str + self.secret_key).encode()).hexdigest(), 16)
         return self.word_list[hash_val % len(self.word_list)]
     
-    def check_guess(self, guess: str, secret: str) -> dict:
-        """Process guess and return hints."""
-        # ... implementation ...
+    def check_guess(self, guess: str) -> dict:
+        """Check guess against self._secret."""
+        # ... compare guess to self._secret ...
         return {"guess": guess, "hints": [...], "is_correct": bool}
 
 # In main:
-game = SimpleWordleGame()
-server = GameServer(game)
-server.run()
+if __name__ == "__main__":
+    # Get secret key from command line
+    if len(sys.argv) < 2:
+        print("Usage: uv run src/main_wordle_game.py <SECRET_KEY>")
+        sys.exit(1)
+    
+    secret_key = sys.argv[1]
+    words_file = Path(__file__).parent.parent / "data" / "english_words.txt"
+    
+    # Create game factory with configuration closure
+    def game_factory(date_str: str) -> WordleGame:
+        return WordleGame(date_str, words_file, secret_key)
+    
+    # Create server with factory
+    server = GameServer(game_factory)
+    server.run()
 ```
+
+**Key design decisions:**
+- **No static variables**: Each instance loads word list independently
+- **Allows hot reloading**: Update word file, next instance uses new words
+- **Secret key from CLI**: Never in source code (open source safe)
+- **Factory closure**: Captures configuration (words_file, secret_key)
 
 **To create your own game:**
 1. Create new file (e.g., `my_game.py`)
-2. Inherit from `IGamle`
-3. Implement `_generate_challenge(date_str)` - your expensive generation logic
-4. Implement `check_guess(guess, secret)` - return custom hints
-5. Create instance and pass to `GameServer`
+2. Inherit from `RiddleGame`
+3. Implement `__init__(date_str, ...)` - accept any config needed
+4. Implement `_generate_challenge(date_str)` - deterministic secret generation
+5. Implement `check_guess(guess)` - compare to `self._secret`
+6. Load resources per-instance (no static variables for hot reload)
+7. Create factory function that captures configuration
+8. Pass factory to `GameServer(factory)`
 
-**Critical**: Don't override `get_daily_challenge()` - it handles caching. Only implement `_generate_challenge()`.
+**Pattern:**
+- **Instance variables**: Everything (word lists, config, secret)
+- **Factory closure**: Captures runtime configuration
+- **No class variables**: Enables configuration updates without restart
 
 ## Frontend Features
 
@@ -193,27 +262,65 @@ server.run()
 ✅ **Secure**: JWT signature prevents state forgery  
 ✅ **Daily reset**: Token expiration handles it automatically  
 ✅ **Fair**: Everyone gets same challenge on same day  
-✅ **Efficient**: Challenge cached in memory, generated only once per day  
-✅ **Fast**: Subsequent guesses don't regenerate expensive challenges  
+✅ **Efficient**: Game instances cached in server, generated only once per day  
+✅ **Fast**: Subsequent guesses reuse existing game instance  
+✅ **Clean architecture**: Server handles caching, games handle game logic  
+✅ **Single Responsibility**: Each class has one clear purpose
 
 ## Running the Server
 
 ```bash
-# Run the simple Wordle demo
-uv run src/simple_wordle_game.py
+# Run the Wordle demo with secret key
+uv run src/main_wordle_game.py "your-super-secret-key-here"
+
+# Production: Use environment variable
+uv run src/main_wordle_game.py "${WORDLE_SECRET_KEY}"
 
 # Or with your own game
-uv run src/my_game.py
+uv run src/my_game.py <args>
 ```
 
 Server starts at: http://127.0.0.1:8000
 
+**⚠️ IMPORTANT: Secret Key**
+- Required as command-line argument
+- Never commit to git or include in source code
+- Used to generate daily word selection
+- Same key = same words for all players
+- Different key = different word sequence
+- Generate with: `openssl rand -base64 32`
+
 ## Security Considerations
 
-- **Change `SECRET_KEY`** in production
+### JWT Security
+- **Change `SECRET_KEY`** in GameServer production deployment
 - Use environment variables for secrets
 - Consider HTTPS in production
 - Rate limiting recommended for `/api/guess` endpoint
+
+### Game Secret Key (Word Selection)
+- **CRITICAL**: Keep the game secret key private
+- Pass via command line argument or environment variable
+- Never commit to source control (even for open source projects)
+- Without the secret key, players cannot predict future words
+- Used in: `hash(date + secret_key)` for deterministic word selection
+- Generate strong key: `openssl rand -base64 32`
+- Rotate periodically to change word sequence
+
+**Example secure deployment:**
+```bash
+# Store in environment
+export WORDLE_SECRET_KEY="$(openssl rand -base64 32)"
+
+# Run server
+uv run src/main_wordle_game.py "${WORDLE_SECRET_KEY}"
+```
+
+### Why This Matters (Open Source)
+Even though your code is open source:
+- Without the secret key, players can't predict tomorrow's word
+- They can see the algorithm, but not reproduce your specific sequence
+- This allows transparent code while maintaining fair gameplay
 
 ## Future Enhancements
 

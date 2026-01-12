@@ -6,46 +6,27 @@ class RiddleGame(ABC):
     """
     Interface for Wordle-like games.
     
-    Any game implementation must inherit from this interface and implement
-    all abstract methods. This ensures compatibility with the server_game.py
-    stateless architecture.
+    Each instance represents ONE game for ONE specific date.
+    The server will cache multiple instances (one per date).
     
-    The instance should cache the daily challenge internally to avoid
-    expensive regeneration on every guess.
+    Each game instance stores its own secret and handles guess checking.
+    No need for date-based caching - that's the server's responsibility.
     """
     
-    def __init__(self):
-        """Initialize the game instance with internal challenge cache."""
-        self._challenge_cache: dict[str, str] = {}
-    
-    def get_daily_challenge(self, date_str: str) -> str:
+    def __init__(self, date_str: str):
         """
-        Get the daily challenge/secret for a given date (with internal caching).
+        Initialize the game instance for a specific date.
         
         Args:
-            date_str: Date in format "YYYY-MM-DD"
-            
-        Returns:
-            The secret word/challenge for that date
-            
-        Note:
-            Must be deterministic - same date must always return same challenge
-            for all players. Challenge is cached internally to avoid regeneration.
+            date_str: The date for this game instance in format "YYYY-MM-DD"
         """
-        if date_str not in self._challenge_cache:
-            self._challenge_cache[date_str] = self._generate_challenge(date_str)
-            
-            # Prevent memory leak: keep only last 7 days
-            if len(self._challenge_cache) > 7:
-                oldest_date = min(self._challenge_cache.keys())
-                del self._challenge_cache[oldest_date]
-        
-        return self._challenge_cache[date_str]
+        self._date = date_str
+        self._secret = self._generate_challenge(date_str)
     
     @abstractmethod
     def _generate_challenge(self, date_str: str) -> str:
         """
-        Internal method to generate a new challenge for a given date.
+        Generate the challenge/secret for a given date.
         
         Args:
             date_str: Date in format "YYYY-MM-DD"
@@ -54,19 +35,30 @@ class RiddleGame(ABC):
             The generated secret word/challenge
             
         Note:
-            This is called only once per date. Implement your expensive
-            challenge generation logic here.
+            Must be deterministic - same date must always return same secret.
+            This is called once during __init__ to create the secret.
         """
         raise NotImplementedError("_generate_challenge must be implemented by subclass")
     
+    @property
+    def secret(self) -> str:
+        """Get the secret for this game instance."""
+        return self._secret
+    
+    @property
+    def date(self) -> str:
+        """Get the date for this game instance."""
+        return self._date
+    
     @abstractmethod
-    def check_guess(self, guess: str, secret: str) -> dict[str, Any]:
+    def check_guess(self, guess: str) -> dict[str, Any]:
         """
         Process a guess and return hints/feedback.
         
+        Uses the secret stored in self._secret (set during __init__).
+        
         Args:
             guess: The player's guess
-            secret: The secret word/challenge
             
         Returns:
             Dictionary containing:
