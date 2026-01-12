@@ -12,7 +12,7 @@ Usage examples:
     cluster_labels = cluster_with_knn(vectors, eps=suggested_eps['median'], min_samples=2)
     
     # K-Means clustering
-    cluster_labels = cluster_with_kmeans(vectors, n_clusters=5, metric='cosine')
+    cluster_labels = cluster_with_kmeans(vectors, n_clusters=5)
 """
 import logging
 import time
@@ -23,17 +23,6 @@ import common as cmn
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-def load_frequent_words(frequency_file: str, top_n: int = 1000) -> list[str]:
-    """
-    Load the most frequent words from a frequency file.
-
-    Args:
-        frequency_file: Path to the frequency file
-        top_n: Number of top frequent words to load
-    Returns:
-        List of frequent words
-    """
 
 
 def extract_word_vectors(model, words: list[str]) -> np.ndarray:
@@ -155,7 +144,6 @@ def cluster_with_kmeans(vectors: np.ndarray, n_clusters: int, random_state: int 
     Args:
         vectors: Word vectors of shape (n_words, n_features)
         n_clusters: Number of clusters to form
-        metric: Distance metric to use ('cosine' or 'euclidean')
         random_state: Random state for reproducibility
         
     Returns:
@@ -303,7 +291,7 @@ def visualize_clusters(words: list[str], vectors: np.ndarray, cluster_labels: np
 
 def distance_to_centroid(word_vectors: np.ndarray, centroid_vectors: np.ndarray) -> float:
     # l2 norm on horizontal axis
-
+    pass
 
 
 def main():

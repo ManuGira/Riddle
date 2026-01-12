@@ -6,7 +6,7 @@ from os.path import join as pjoin, dirname, abspath
 # Add src directory to path
 sys.path.insert(0, pjoin(dirname(__file__), "..", "src"))
 
-from main_assistant import GameAssistant
+from main_assistant_semantic import GameAssistant
 
 
 class TestGameAssistant:

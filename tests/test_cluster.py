@@ -344,7 +344,7 @@ class TestClusterWithKMeans:
     def test_kmeans_basic(self, sample_vectors):
         """Test basic k-means clustering"""
         n_clusters = 3
-        cluster_labels = cluster_with_kmeans(sample_vectors, n_clusters=n_clusters)
+        cluster_labels, _, _ = cluster_with_kmeans(sample_vectors, n_clusters=n_clusters)
         
         # Check return type
         assert isinstance(cluster_labels, np.ndarray)
@@ -360,36 +360,19 @@ class TestClusterWithKMeans:
 
     def test_kmeans_different_n_clusters(self, sample_vectors):
         """Test with different numbers of clusters"""
-        labels_2 = cluster_with_kmeans(sample_vectors, n_clusters=2)
-        labels_5 = cluster_with_kmeans(sample_vectors, n_clusters=5)
+        cluster_labels_2, _, _ = cluster_with_kmeans(sample_vectors, n_clusters=2)
+        cluster_labels_5, _, _ = cluster_with_kmeans(sample_vectors, n_clusters=5)
         
         # Both should produce valid results
-        assert labels_2.shape[0] == sample_vectors.shape[0]
-        assert labels_5.shape[0] == sample_vectors.shape[0]
+        assert cluster_labels_2.shape[0] == sample_vectors.shape[0]
+        assert cluster_labels_5.shape[0] == sample_vectors.shape[0]
         
         # Should have the requested number of clusters
-        assert len(np.unique(labels_2)) == 2
-        assert len(np.unique(labels_5)) == 5
-
-    def test_kmeans_cosine_metric(self, sample_vectors):
-        """Test that cosine metric works"""
-        cluster_labels = cluster_with_kmeans(sample_vectors, n_clusters=3, metric='cosine')
-        
-        # Should produce valid clustering
-        assert cluster_labels.shape[0] == sample_vectors.shape[0]
-        assert len(np.unique(cluster_labels)) == 3
-
-    def test_kmeans_euclidean_metric(self, sample_vectors):
-        """Test with euclidean metric"""
-        cluster_labels = cluster_with_kmeans(sample_vectors, n_clusters=3, metric='euclidean')
-        
-        # Should produce valid clustering
-        assert cluster_labels.shape[0] == sample_vectors.shape[0]
-        assert len(np.unique(cluster_labels)) == 3
-
+        assert len(np.unique(cluster_labels_2)) == 2
+        assert len(np.unique(cluster_labels_5)) == 5
     def test_kmeans_distinct_clusters(self, clustered_vectors):
         """Test with well-separated clusters"""
-        cluster_labels = cluster_with_kmeans(clustered_vectors, n_clusters=3)
+        cluster_labels, _, _ = cluster_with_kmeans(clustered_vectors, n_clusters=3)
         
         # Should find exactly 3 clusters
         n_clusters = len(np.unique(cluster_labels))
@@ -401,7 +384,7 @@ class TestClusterWithKMeans:
 
     def test_kmeans_single_cluster(self, sample_vectors):
         """Test with single cluster"""
-        cluster_labels = cluster_with_kmeans(sample_vectors, n_clusters=1)
+        cluster_labels, _, _ = cluster_with_kmeans(sample_vectors, n_clusters=1)
         
         # All points should be in the same cluster
         assert len(np.unique(cluster_labels)) == 1
@@ -412,7 +395,7 @@ class TestClusterWithKMeans:
         np.random.seed(42)
         small_vectors = np.random.randn(10, 5)
         
-        cluster_labels = cluster_with_kmeans(small_vectors, n_clusters=3)
+        cluster_labels, _, _ = cluster_with_kmeans(small_vectors, n_clusters=3)
         
         # Should handle small datasets
         assert cluster_labels.shape[0] == 10
@@ -420,10 +403,10 @@ class TestClusterWithKMeans:
 
     def test_kmeans_reproducibility(self, sample_vectors):
         """Test that results are reproducible with same random_state"""
-        labels_1 = cluster_with_kmeans(sample_vectors, n_clusters=3, random_state=42)
-        labels_2 = cluster_with_kmeans(sample_vectors, n_clusters=3, random_state=42)
+        cluster_labels_1, _, _  = cluster_with_kmeans(sample_vectors, n_clusters=3, random_state=42)
+        cluster_labels_2, _, _  = cluster_with_kmeans(sample_vectors, n_clusters=3, random_state=42)
         
-        assert np.array_equal(labels_1, labels_2)
+        assert np.array_equal(cluster_labels_1, cluster_labels_2)
 
     def test_kmeans_input_not_modified(self, sample_vectors):
         """Test that input vectors are not modified"""
@@ -439,7 +422,8 @@ class TestClusterWithKMeans:
         np.random.seed(42)
         vectors_2d = np.random.randn(30, 2)
         
-        cluster_labels = cluster_with_kmeans(vectors_2d, n_clusters=4)
+        cluster_labels, _, _ = cluster_with_kmeans(vectors_2d, n_clusters=4)
+       
         
         assert cluster_labels.shape[0] == 30
         assert len(np.unique(cluster_labels)) == 4
@@ -449,14 +433,8 @@ class TestClusterWithKMeans:
         np.random.seed(42)
         high_dim_vectors = np.random.randn(100, 100)
         
-        cluster_labels = cluster_with_kmeans(high_dim_vectors, n_clusters=5)
+        result = cluster_with_kmeans(high_dim_vectors, n_clusters=5)
+        cluster_labels, _, _ = result
         
         assert cluster_labels.shape[0] == 100
         assert len(np.unique(cluster_labels)) == 5
-
-    def test_kmeans_default_metric(self, sample_vectors):
-        """Test that default metric is cosine"""
-        labels_default = cluster_with_kmeans(sample_vectors, n_clusters=3, random_state=42)
-        labels_explicit = cluster_with_kmeans(sample_vectors, n_clusters=3, metric='cosine', random_state=42)
-        
-        assert np.array_equal(labels_default, labels_explicit)
