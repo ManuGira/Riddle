@@ -100,10 +100,20 @@ class RiddleGame:
 ```json
 {
   "date": "2026-01-08",
-  "guesses": [{"guess": "CRANE", "hints": [...]}],
-  "attempts": 1,
-  "completed": false,
-  "won": false,
+  "game_state": {
+    "guesses": [
+      {
+        "word": "CRANE",
+        "hints": [{"letter": "C", "status": "absent"}, ...],
+        "is_correct": false
+      }
+    ],
+    "attempts": 1,
+    "max_attempts": 6,
+    "won": false,
+    "lost": false,
+    "game_over": false
+  },
   "exp": 1736294400
 }
 ```
@@ -111,6 +121,7 @@ class RiddleGame:
 - **Signed with HMAC**: Prevents client tampering
 - **Expires at midnight**: Forces daily reset
 - **Self-contained**: No database lookups needed
+- **Game state managed by RiddleGame**: Server just stores/restores state from token
 
 ## API Endpoints
 
@@ -132,6 +143,12 @@ class RiddleGame(ABC):
     """
     Each instance represents ONE game for ONE specific date.
     Server caches multiple instances (one per date).
+    
+    GAME STATE PHILOSOPHY:
+    - RiddleGame owns all game logic and state management
+    - check_guess() accepts and returns complete game state
+    - Win/loss conditions determined by the game, not UI/server
+    - Game state is opaque to server (just stores it in JWT)
     """
     
     def __init__(self, date_str: str):
@@ -156,11 +173,38 @@ class RiddleGame(ABC):
         """Get this game's secret."""
         return self._secret
     
-    @abstractmethod
-    def check_guess(self, guess: str) -> dict[str, Any]:
+    def create_game_state(self) -> dict:
         """
-        Process a guess using self._secret.
-        No need to pass secret - it's stored in the instance.
+        Create initial game state.
+        Override if your game needs different state structure.
+        """
+        return {
+            'guesses': [],
+            'attempts': 0,
+            'game_over': False
+        }
+    
+    @abstractmethod
+    def check_guess(self, guess: str, game_state: dict | None = None) -> dict:
+        """
+        Process a guess and update game state.
+        
+        Args:
+            guess: Player's guess
+            game_state: Current game state (None for new game)
+        
+        Returns:
+            Complete updated game state with:
+            - All previous guesses
+            - Current attempt count
+            - Win/loss status
+            - Any game-specific data
+        
+        The game is responsible for:
+        - Validating guesses
+        - Determining win/loss conditions
+        - Tracking attempts and limits
+        - Managing all game rules
         """
         pass
 ```
@@ -168,8 +212,10 @@ class RiddleGame(ABC):
 **Key concepts:**
 - **One instance = One date**: `RiddleGame("2026-01-12")` is the game for Jan 12
 - **Secret stored in instance**: `self._secret` set during `__init__`
+- **Game manages state**: `check_guess()` accepts and returns complete game state
+- **Stateless from server perspective**: Server just stores/restores state in JWT
+- **Game owns logic**: Win/loss/attempts managed by game, not UI or server
 - **No caching in game**: Server handles caching instances
-- **Simple API**: `check_guess(guess)` - secret already known
 
 ### Current Implementation
 
@@ -178,6 +224,8 @@ Example in [main_wordle_game.py](../src/main_wordle_game.py):
 ```python
 class WordleGame(RiddleGame):
     """Each instance is for one specific date."""
+    
+    MAX_ATTEMPTS = 6  # Game rule: standard Wordle limit
     
     def __init__(self, date_str: str, words_file: Path, secret_key: str):
         """
@@ -203,10 +251,95 @@ class WordleGame(RiddleGame):
         hash_val = int(hashlib.sha256((date_str + self.secret_key).encode()).hexdigest(), 16)
         return self.word_list[hash_val % len(self.word_list)]
     
-    def check_guess(self, guess: str) -> dict:
-        """Check guess against self._secret."""
-        # ... compare guess to self._secret ...
-        return {"guess": guess, "hints": [...], "is_correct": bool}
+    def create_game_state(self) -> dict:
+        """Create initial Wordle game state."""
+        return {
+            'guesses': [],
+            'attempts': 0,
+            'max_attempts': self.MAX_ATTEMPTS,
+            'won': False,
+            'lost': False,
+            'game_over': False
+        }
+    
+    def check_guess(self, guess: str, game_state: dict | None = None) -> dict:
+        """
+        Check guess and update game state.
+        
+        The game is responsible for:
+        - Validating the guess (length, valid word)
+        - Generating hints (correct/present/absent)
+        - Tracking attempts
+        - Determining win/loss conditions
+        - Preventing play after game over
+        """
+        # Initialize or copy state
+        if game_state is None:
+            game_state = self.create_game_state()
+        else:
+            game_state = game_state.copy()
+            game_state['guesses'] = game_state['guesses'].copy()
+        
+        # Game logic: check if already over
+        if game_state['game_over']:
+            raise ValueError("Game is already over")
+        
+        # Validate guess
+        guess = guess.upper().strip()
+        if len(guess) != 5:
+            raise ValueError("Guess must be 5 letters")
+        if guess not in self.word_list:
+            raise ValueError(f"'{guess}' not in word list")
+        
+        # Generate hints (Wordle algorithm)
+        hints = self._generate_hints(guess)
+        
+        # Create guess result
+        is_correct = guess == self._secret
+        guess_result = {
+            'word': guess,
+            'hints': hints,
+            'is_correct': is_correct
+        }
+        
+        # Update state
+        game_state['guesses'].append(guess_result)
+        game_state['attempts'] += 1
+        
+        # Game logic: determine win/loss
+        if is_correct:
+            game_state['won'] = True
+            game_state['game_over'] = True
+        elif game_state['attempts'] >= game_state['max_attempts']:
+            game_state['lost'] = True
+            game_state['game_over'] = True
+        
+        return game_state
+    
+    def _generate_hints(self, guess: str) -> list:
+        """Wordle hint logic: correct > present > absent."""
+        hints = []
+        secret_letters = list(self._secret)
+        
+        # First pass: mark correct positions
+        for i, letter in enumerate(guess):
+            if letter == self._secret[i]:
+                hints.append({'letter': letter, 'status': 'correct'})
+                secret_letters[i] = None
+            else:
+                hints.append({'letter': letter, 'status': 'pending'})
+        
+        # Second pass: mark present letters
+        for i, hint in enumerate(hints):
+            if hint['status'] == 'pending':
+                letter = guess[i]
+                if letter in secret_letters:
+                    hints[i]['status'] = 'present'
+                    secret_letters[secret_letters.index(letter)] = None
+                else:
+                    hints[i]['status'] = 'absent'
+        
+        return hints
 
 # In main:
 if __name__ == "__main__":
@@ -238,15 +371,24 @@ if __name__ == "__main__":
 2. Inherit from `RiddleGame`
 3. Implement `__init__(date_str, ...)` - accept any config needed
 4. Implement `_generate_challenge(date_str)` - deterministic secret generation
-5. Implement `check_guess(guess)` - compare to `self._secret`
-6. Load resources per-instance (no static variables for hot reload)
-7. Create factory function that captures configuration
-8. Pass factory to `GameServer(factory)`
+5. Override `create_game_state()` - define your game's state structure
+6. Implement `check_guess(guess, game_state)` - validate, update state, determine win/loss
+7. Load resources per-instance (no static variables for hot reload)
+8. Create factory function that captures configuration
+9. Pass factory to `GameServer(factory)`
 
 **Pattern:**
+- **Game manages state**: `check_guess()` accepts and returns complete game state
+- **Game owns logic**: Win/loss/attempts determined by game, not UI
+- **Stateless server**: Server just stores game state in JWT, doesn't interpret it
 - **Instance variables**: Everything (word lists, config, secret)
 - **Factory closure**: Captures runtime configuration
 - **No class variables**: Enables configuration updates without restart
+
+**Separation of Concerns:**
+- **RiddleGame**: Game rules, state management, win/loss logic
+- **GameServer**: HTTP handling, JWT encoding/decoding, instance caching
+- **UI (CLI/Web)**: Display, user input, rendering game state
 
 ## Frontend Features
 
@@ -265,7 +407,10 @@ if __name__ == "__main__":
 ✅ **Efficient**: Game instances cached in server, generated only once per day  
 ✅ **Fast**: Subsequent guesses reuse existing game instance  
 ✅ **Clean architecture**: Server handles caching, games handle game logic  
-✅ **Single Responsibility**: Each class has one clear purpose
+✅ **Single Responsibility**: Each class has one clear purpose  
+✅ **Game-owned state**: All game logic and rules in RiddleGame, not scattered across UI/server  
+✅ **Reusable games**: Same game class works for web, CLI, or any UI  
+✅ **Testable**: Game logic isolated and easy to unit test
 
 ## Running the Server
 

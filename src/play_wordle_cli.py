@@ -19,19 +19,15 @@ class WordleCLI:
     RESET = '\033[0m'
     BOLD = '\033[1m'
     
-    def __init__(self, game: WordleGame, max_attempts: int = 6):
+    def __init__(self, game: WordleGame):
         """
         Initialize the CLI game.
         
         Args:
             game: WordleGame instance for today
-            max_attempts: Maximum number of guesses allowed
         """
         self.game = game
-        self.max_attempts = max_attempts
-        self.guesses = []
-        self.attempts = 0
-        self.won = False
+        self.game_state = game.create_game_state()
     
     def colorize_hint(self, letter: str, status: str) -> str:
         """
@@ -51,26 +47,27 @@ class WordleCLI:
         else:  # absent
             return f"{self.GRAY}{letter}{self.RESET}"
     
-    def display_guess(self, result: dict):
+    def display_guess(self, guess_result: dict):
         """Display a guess with colored hints."""
         colored_letters = []
-        for hint in result['hints']:
+        for hint in guess_result['hints']:
             colored_letters.append(self.colorize_hint(hint['letter'], hint['status']))
         
         print("  " + " ".join(colored_letters))
     
     def display_board(self):
         """Display the current game board."""
+        state = self.game_state
         print("\n" + "="*40)
-        print(f"  WORDLE - Attempt {self.attempts}/{self.max_attempts}")
+        print(f"  WORDLE - Attempt {state['attempts']}/{state['max_attempts']}")
         print("="*40)
         
         # Show all previous guesses
-        for result in self.guesses:
-            self.display_guess(result)
+        for guess_result in state['guesses']:
+            self.display_guess(guess_result)
         
         # Show remaining empty rows
-        for _ in range(self.max_attempts - len(self.guesses)):
+        for _ in range(state['max_attempts'] - len(state['guesses'])):
             print("  _ _ _ _ _")
         
         print()
@@ -115,52 +112,49 @@ class WordleCLI:
         print("🎮 "*10)
         
         print(f"\n📅 Today's date: {self.game.date}")
-        print(f"🎯 You have {self.max_attempts} attempts to guess the word")
+        print(f"🎯 You have {self.game_state['max_attempts']} attempts to guess the word")
         
         self.display_legend()
         
-        while self.attempts < self.max_attempts and not self.won:
+        while not self.game_state['game_over']:
             self.display_board()
             
             # Get guess from player
             guess = self.get_guess()
             
-            # Check guess
+            # Check guess and update game state
             try:
-                result = self.game.check_guess(guess)
-                self.guesses.append(result)
-                self.attempts += 1
+                self.game_state = self.game.check_guess(guess, self.game_state)
                 
-                # Check if won
-                if result['is_correct']:
-                    self.won = True
+                # Check if game ended
+                if self.game_state['game_over']:
                     self.display_board()
-                    self.display_victory()
+                    if self.game_state['won']:
+                        self.display_victory()
+                    else:
+                        self.display_defeat()
                     return
                 
             except ValueError as e:
                 print(f"❌ {e}")
                 continue
-        
-        # Game over
-        if not self.won:
-            self.display_board()
-            self.display_defeat()
     
     def display_victory(self):
         """Display victory message."""
+        state = self.game_state
         print("\n" + "🎉 "*15)
         print(f"{self.GREEN}{self.BOLD}CONGRATULATIONS! YOU WON!{self.RESET}")
         print("🎉 "*15)
-        print(f"\n✨ You guessed the word in {self.attempts}/{self.max_attempts} attempts!")
+        print(f"\n✨ You guessed the word in {state['attempts']}/{state['max_attempts']} attempts!")
         print(f"🎯 The word was: {self.BOLD}{self.game.secret}{self.RESET}\n")
     
     def display_defeat(self):
         """Display defeat message."""
+        state = self.game_state
         print("\n" + "💔 "*15)
         print(f"{self.GRAY}GAME OVER{self.RESET}")
         print("💔 "*15)
-        print(f"\n😔 You've used all {self.max_attempts} attempts.")
+        print(f"\n😔 You've used all {state['max_attempts']} attempts.")
         print(f"🎯 The word was: {self.BOLD}{self.game.secret}{self.RESET}\n")
         print("Better luck next time! 💪\n")
 

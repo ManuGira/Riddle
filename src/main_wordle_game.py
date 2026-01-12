@@ -9,6 +9,8 @@ import sys
 class WordleGame(RiddleGame):
     """Wordle game implementation - each instance is for one specific date."""
     
+    MAX_ATTEMPTS = 6  # Standard Wordle rules
+    
     def __init__(self, date_str: str, words_file: Path, secret_key: str):
         """
         Create a game instance for a specific date.
@@ -40,24 +42,112 @@ class WordleGame(RiddleGame):
         hash_val = int(hashlib.sha256((date_str + self.secret_key).encode()).hexdigest(), 16)
         return self.word_list[hash_val % len(self.word_list)]
     
-    def check_guess(self, guess: str) -> dict[str, Any]:
-        """Check a guess against this game's secret."""
+    def create_game_state(self) -> dict:
+        """
+        Create initial game state.
+        
+        Returns:
+            New game state dictionary
+        """
+        return {
+            'guesses': [],
+            'attempts': 0,
+            'max_attempts': self.MAX_ATTEMPTS,
+            'won': False,
+            'lost': False,
+            'game_over': False
+        }
+    
+    def check_guess(self, guess: str, game_state: dict | None = None) -> dict:
+        """
+        Check a guess against the secret word and update game state.
+        
+        Args:
+            guess: The guessed word (case-insensitive)
+            game_state: Current game state (creates new if None)
+            
+        Returns:
+            Updated game state with new guess result:
+            {
+                'guesses': [{'word': str, 'hints': [...], 'is_correct': bool}, ...],
+                'attempts': int,
+                'max_attempts': int,
+                'won': bool,
+                'lost': bool,
+                'game_over': bool
+            }
+            
+        Raises:
+            ValueError: If guess is invalid or game is already over
+        """
+        # Initialize state if needed
+        if game_state is None:
+            game_state = self.create_game_state()
+        else:
+            # Create a copy to avoid mutation
+            game_state = game_state.copy()
+            game_state['guesses'] = game_state['guesses'].copy()
+        
+        # Check if game is over
+        if game_state['game_over']:
+            raise ValueError("Game is already over")
+        
         guess = guess.upper().strip()
         secret = self._secret.upper()
         
+        # Validate guess
         if len(guess) != len(secret):
             raise ValueError(f"Guess must be {len(secret)} letters")
         
+        if not guess.isalpha():
+            raise ValueError("Guess must contain only letters")
+        
+        if guess not in self.word_list:
+            raise ValueError(f"'{guess}' is not in the word list")
+        
+        # Generate hints using Wordle logic
         hints = []
+        secret_letters = list(secret)
+        
+        # First pass: mark correct positions
         for i, letter in enumerate(guess):
             if letter == secret[i]:
-                hints.append({"letter": letter, "status": "correct"})
-            elif letter in secret:
-                hints.append({"letter": letter, "status": "present"})
+                hints.append({'letter': letter, 'status': 'correct'})
+                secret_letters[i] = None  # Mark as used
             else:
-                hints.append({"letter": letter, "status": "absent"})
+                hints.append({'letter': letter, 'status': 'pending'})
         
-        return {"guess": guess, "hints": hints, "is_correct": guess == secret}
+        # Second pass: mark present letters
+        for i, hint in enumerate(hints):
+            if hint['status'] == 'pending':
+                letter = guess[i]
+                if letter in secret_letters:
+                    hints[i]['status'] = 'present'
+                    secret_letters[secret_letters.index(letter)] = None
+                else:
+                    hints[i]['status'] = 'absent'
+        
+        # Create guess result
+        is_correct = guess == secret
+        guess_result = {
+            'word': guess,
+            'hints': hints,
+            'is_correct': is_correct
+        }
+        
+        # Update game state
+        game_state['guesses'].append(guess_result)
+        game_state['attempts'] += 1
+        
+        # Check win/loss conditions
+        if is_correct:
+            game_state['won'] = True
+            game_state['game_over'] = True
+        elif game_state['attempts'] >= game_state['max_attempts']:
+            game_state['lost'] = True
+            game_state['game_over'] = True
+        
+        return game_state
 
 def main():
     # Get secret key from command line argument
