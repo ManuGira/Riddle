@@ -1,9 +1,16 @@
 import dataclasses
+from pathlib import Path
 import enum
+import hashlib
+
 import numpy as np
-import common as cmn
 import coordinatus as co
-from riddle import IRiddle
+
+import riddle.common as cmn
+from riddle.riddle_game import RiddleGame
+import riddle.similarity_matrix_codec as codec
+
+SIMILARITY_MATRIX_FILE = Path(__file__).parent.parent / "data" / "cross_words" / "similarity_matrix"
 
 class Orientation(enum.Enum):
     HORIZONTAL = 'H'
@@ -127,7 +134,7 @@ class WordCoord:
 class CrossWordsBoard:
     def __init__(self):
         self.word_coords: list[WordCoord] = []
-        self.revealed_placements: list[bool] = []
+        self.revealed_words: list[bool] = []
 
     def is_valid_placement(self, new_word: WordCoord) -> bool:
         """Check if a crossword placement is valid on the board."""
@@ -154,12 +161,12 @@ class CrossWordsBoard:
 
     def add_word(self, word: WordCoord) -> None:
         self.word_coords.append(word)
-        self.revealed_placements.append(False)
+        self.revealed_words.append(False)
 
     def reveal_word(self, word: str) -> None:
         for idx, placement in enumerate(self.word_coords):
             if placement.word == word:
-                self.revealed_placements[idx] = True
+                self.revealed_words[idx] = True
         
 
     def compute_new_word_coordinates(self, word: str) -> list[WordCoord]:
@@ -228,7 +235,7 @@ class CrossWordsBoard:
         width = max_x - min_x + 1
         height = max_y - min_y + 1
         board_mask = np.full((height, width), False, dtype=bool)
-        for revealed, word in zip(self.revealed_placements, self.word_coords):
+        for revealed, word in zip(self.revealed_words, self.word_coords):
             if not revealed:
                 continue
             for letter in word.letters():
@@ -250,45 +257,39 @@ class IModel:
     def similarity(self, word1: str, word2: str) -> float:
         pass
 
-class CrossWordsGame:
-    def __init__(self, board: CrossWordsBoard, model: IModel, size: int):
-        self.board = board
-        self.model = model
+class CrossWordsGame(RiddleGame):
+    def __init__(self, similarity_matrix_file: Path, size: int, seed: int):
+        super().__init__()
+        self.board: CrossWordsBoard
+        self.similarity_matrix_file = similarity_matrix_file
         self.size = size
+        self.seed = seed
 
         sorted_words, similarity_map = self.load_words(self.model)
         self.root_word: str = sorted_words[0]
         self.sorted_words: list[str] = sorted_words
         self.similarity_map: dict[str, float] = similarity_map
 
-        self.generate_game()
 
+    def _select_word_for_game(self, date_str, words, similarity_matrix):
+        val_str = date_str + str(self.seed)
+        hash_val = int(hashlib.sha256(val_str.encode()).hexdigest(), 16)
 
-    @staticmethod
-    def load_words(model: IModel) -> tuple[list[str], dict[str, float]]:
-        # self.model_path = "frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"  # TODO: Update with actual path
+        valid_rows = np.sum(similarity_matrix > 0.2, axis=1) >= 2*self.size
+        valid_indexes = np.arange(len(words))[valid_rows]
 
-        # Step 1: Load word2vec model
-        # print("Loading word2vec model...")
-        # model = cmn.load_model(model_path)
+        word_index = valid_indexes[hash_val % len(valid_indexes)]
+        
+        self.root_word = words[word_index]
+        similarities = similarity_matrix[word_index]
+        self.similarity_map = {word: similarities[words.index(word)] for word in words}
+        self.sorted_words = sorted(words, key=lambda w: self.similarity_map[w], reverse=True)
+        
 
-        print("Loading frequent words...")
-        frequent_words = cmn.load_most_frequent_words(model=model)
+    def _generate_challenge(self, date_str: str) -> str:
+        similarity_matrix, words = codec.load_similarity_matrix(self.similarity_matrix_file)
+        self._select_word_for_game(date_str, words, similarity_matrix)
 
-        # filter out words shorter than 3 characters
-        frequent_words: list[str] = [word for word in frequent_words if len(word) >= 3]
-
-        # Choose a root word at random from the frequent words
-        root_word: str = np.random.choice(frequent_words)
-
-        # sort all words by their similarity to the root word
-        print("Sorting words by similarity to root word:", root_word)
-        similarity_map: dict[str, float] = {word: model.similarity(root_word, word) for word in frequent_words}
-
-        sorted_words: list[str] = sorted(frequent_words, key=lambda w: similarity_map[w], reverse=True)
-        return sorted_words, similarity_map
-
-    def generate_game(self):
         placed_words = []
         while len(self.board.word_coords) < self.size:
             # find the first word in sorted_words that is not already on the board
@@ -326,11 +327,30 @@ class CrossWordsGame:
             self.board.add_word(new_crossword)
             placed_words.append(word)
 
+
+    def check_guess(self, guess: str, secret: str) -> dict[str, Any]:
+        guess = guess.upper().strip()
+        secret = secret.upper()
+        
+        if len(guess) != len(secret):
+            raise ValueError(f"Guess must be {len(secret)} letters")
+        
+        hints = []
+        for i, letter in enumerate(guess):
+            if letter == secret[i]:
+                hints.append({"letter": letter, "status": "correct"})
+            elif letter in secret:
+                hints.append({"letter": letter, "status": "present"})
+            else:
+                hints.append({"letter": letter, "status": "absent"})
+        
+        return {"guess": guess, "hints": hints, "is_correct": guess == secret}
+
 def run_game():
     game = CrossWordsGame(
-        CrossWordsBoard(),
-        cmn.load_model(),
+        similarity_matrix_file=SIMILARITY_MATRIX_FILE,
         size=10,
+        seed=42,  # TODO: in production, read secret seed from passed argument
     )
 
     # reveal the first word
@@ -358,9 +378,58 @@ def run_game():
         user_word = input("Enter a word to reveal> ").strip()
         game.board.reveal_word(user_word)
 
+def generate_similarity_matrix(word_list_file: Path, D=200, percentile=95):
+    """
+    Generate and save similarity matrix for cross words game. 
+    This can be run as a standalone script, only once.
+    Then the generated similarity matrix file can be used by the CrossWordsGame, avoiding the need to load
+    the full word2vec model at runtime.
+    """
+
+    print("Loading model...")
+
+    model_files = {
+        200: f"frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin",
+        700: f"frWiki_no_phrase_no_postag_700_cbow_cut100.bin",
+    }
+
+    model = cmn.load_model(model_files[D])
+
+    print("Loading words...")
+
+    with open(word_list_file, "r", encoding="utf-8") as f:
+        words = [line.strip() for line in f.readlines()]
+
+    # remove short words
+    words = [word.replace("œ", "oe") for word in words]  # replace œ with oe
+    words = [word for word in words if "'" not in word]  # remove words with apostrophes
+    words = [word for word in words if len(word) >= 3] # min length 3
+    words = [word for word in words if word in model.key_to_index]
+
+    N = len(words)
+    print(f"Loaded {N} words.")
+
+    output_folder = Path(__file__).parent.parent / "data" / "cross_words"
+
+    sim_matrix = cmn.compute_similarity_matrix_fast(model, words)
+    
+    codec.save_similarity_matrix(
+        codec.SparseMatrixCodec(percentile=percentile), 
+        sim_matrix, 
+        words, 
+        SIMILARITY_MATRIX_FILE, 
+    )
+
 
 def main():
     run_game()
 
 if __name__ == "__main__":
+
+    # generate_similarity_matrix(
+    #     Path(__file__).parent.parent / "data" / "french_words_5000.txt", 
+    #     D=200, 
+    #     percentile=95,
+    # )
+
     main()

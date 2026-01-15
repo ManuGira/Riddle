@@ -4,10 +4,11 @@ Play Wordle directly in your terminal.
 """
 
 import dataclasses
-from main_wordle_game import WordleGame, WordleState
-from pathlib import Path
+from wordle.wordle_game import WordleGame
+from wordle.wordle_state import WordleState
 from datetime import datetime
 import sys
+from riddle import REPO_ROOT_PATH
 
 @dataclasses.dataclass
 class Colors:
@@ -165,15 +166,13 @@ def main():
     """Run the terminal Wordle game."""
     # Get secret key from command line
     if len(sys.argv) < 2:
-        print("Usage: uv run src/play_wordle_cli.py <SECRET_KEY>")
-        print("Example: uv run src/play_wordle_cli.py my-secret-key")
-        print("\n⚠️  Use the same secret key as your server for consistent words!")
-        sys.exit(1)
-    
-    secret_key = sys.argv[1]
+        import numpy as np
+        secret_key = str(np.random.randint(0, 1_000_000))
+    else:
+        secret_key = sys.argv[1]
     
     # Configuration
-    words_file = Path(__file__).parent.parent / "data" / "english_words.txt"
+    words_file = REPO_ROOT_PATH / "data" / "english_words.txt"
     today = datetime.now().strftime("%Y-%m-%d")
     
     # Create game for today

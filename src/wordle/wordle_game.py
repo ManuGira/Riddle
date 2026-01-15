@@ -1,73 +1,7 @@
-from riddle_game import RiddleGame
-from game_state import GameState
+from riddle.riddle_game import RiddleGame
+from .wordle_state import WordleState, GuessResult
 import hashlib
 from pathlib import Path
-from server_game import GameServer
-from typing import Any
-from dataclasses import dataclass, field, asdict
-import sys
-
-
-@dataclass
-class GuessResult:
-    """Result of a single guess."""
-    word: str
-    hints: list[dict[str, str]]  # [{'letter': 'A', 'status': 'correct'}, ...]
-    is_correct: bool
-
-
-@dataclass
-class WordleState(GameState):
-    """Game state for Wordle."""
-    guesses: list[GuessResult] = field(default_factory=list)
-    attempts: int = 0
-    max_attempts: int = 6
-    won: bool = False
-    lost: bool = False
-    game_over: bool = False
-    
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JWT encoding."""
-        return {
-            'guesses': [
-                {
-                    'word': g.word,
-                    'hints': g.hints,
-                    'is_correct': g.is_correct
-                }
-                for g in self.guesses
-            ],
-            'attempts': self.attempts,
-            'max_attempts': self.max_attempts,
-            'won': self.won,
-            'lost': self.lost,
-            'game_over': self.game_over
-        }
-    
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> 'WordleState':
-        """Reconstruct from dictionary (from JWT)."""
-        guesses = [
-            GuessResult(
-                word=g['word'],
-                hints=g['hints'],
-                is_correct=g['is_correct']
-            )
-            for g in data.get('guesses', [])
-        ]
-        
-        return cls(
-            guesses=guesses,
-            attempts=data.get('attempts', 0),
-            max_attempts=data.get('max_attempts', 6),
-            won=data.get('won', False),
-            lost=data.get('lost', False),
-            game_over=data.get('game_over', False)
-        )
-    
-    def is_game_over(self) -> bool:
-        """Check if game is over."""
-        return self.game_over
 
 
 class WordleGame(RiddleGame):
@@ -88,12 +22,10 @@ class WordleGame(RiddleGame):
         self.secret_key = secret_key
         
         # Load word list (fresh load each time - allows updates without restart)
-        try:
-            with open(words_file, "r", encoding="utf-8") as f:
-                words = [w.strip().upper() for w in f if len(w.strip()) == 5]
-            self.word_list = [w for w in words if w.isalpha()]
-        except FileNotFoundError:
-            self.word_list = ["APPLE", "CRANE", "STOLE", "BEACH", "DREAM", "GLOBE"]
+        with open(words_file, "r", encoding="utf-8") as f:
+            words = [w.strip().upper() for w in f if len(w.strip()) == 5]
+        self.word_list = [w for w in words if w.isalpha()]
+
         
         # Call parent __init__ which calls _generate_challenge
         super().__init__(date_str)
@@ -203,35 +135,3 @@ class WordleGame(RiddleGame):
             game_state.game_over = True
         
         return game_state
-
-def main():
-    # Get secret key from command line argument
-    if len(sys.argv) < 2:
-        print("Usage: uv run src/main_wordle_game.py <SECRET_KEY>")
-        print("Example: uv run src/main_wordle_game.py my-super-secret-password-2026")
-        print("\nWARNING: Keep SECRET_KEY private! Don't commit it to git.")
-        sys.exit(1)
-    
-    secret_key = sys.argv[1]
-    
-    # Configuration (can be changed without restart - no static variables!)
-    words_file = Path(__file__).parent.parent / "data" / "english_words.txt"
-    
-    # Create game factory that captures configuration
-    def game_factory(date_str: str) -> WordleGame:
-        return WordleGame(date_str, words_file, secret_key)
-    
-    # Create server with factory
-    server = GameServer(game_factory)
-    
-    print(f"🎮 Wordle Server Starting...")
-    print(f"📁 Word list: {words_file}")
-    print(f"🔐 Secret key: {'*' * len(secret_key)} (hidden)")
-    print(f"📊 Word pool size: Will be loaded per game instance")
-    print(f"⚠️  Keep the secret key private - it's used to generate daily words!")
-    
-    # Run the server (will create today's game and show secret for testing)
-    server.run()
-
-if __name__ == "__main__":
-    main()

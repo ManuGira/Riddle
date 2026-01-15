@@ -3,9 +3,9 @@ Automated player that uses the assistant to play the semantic game automatically
 """
 import time
 import numpy as np
-from common import load_model, load_most_frequent_words, compute_heatmap_matrix
-import main_assistant as mass
-import main_semantic_game as mgame
+from riddle.common import load_model, load_most_frequent_words, compute_heatmap_matrix
+import semantle.main_assistant_semantic as mass
+import semantle.main_semantle_game as mgame
 
 
 def auto_play_game(game: mgame.SemanticGame, assistant: mass.GameAssistant, max_attempts=50, verbose=True):

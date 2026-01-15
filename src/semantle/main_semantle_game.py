@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from common import load_model, load_most_frequent_words
+from riddle.common import load_model, load_most_frequent_words
 
 
 class SemanticGame:

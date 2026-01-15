@@ -9,7 +9,8 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
 from pathlib import Path
-from riddle_game import RiddleGame
+from .riddle_game import RiddleGame
+from .game_state import GameState
 from typing import Callable
 
 
@@ -58,6 +59,8 @@ class GameServer:
                 del self._game_cache[oldest_date]
         
         return self._game_cache[date_str]
+    
+    def get_today_date(self) -> str:
         """Get today's date as string."""
         return datetime.now().strftime("%Y-%m-%d")
     
@@ -67,10 +70,14 @@ class GameServer:
         midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         return int(midnight.timestamp())
     
-    def create_token(self, state: dict) -> str:
+    def create_token(self, date: str, game_state: GameState) -> str:
         """Create JWT token with game state."""
-        state["exp"] = self.get_midnight_timestamp()
-        return jwt.encode(state, self.secret_key, algorithm=self.algorithm)
+        payload = {
+            "date": date,
+            "game_state": game_state.to_dict()
+        }
+        payload["exp"] = self.get_midnight_timestamp()
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
     
     def verify_token(self, token: str) -> dict | None:
         """Verify and decode JWT token. Returns None if invalid/expired."""
@@ -83,16 +90,6 @@ class GameServer:
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return None
     
-    def new_game_state(self) -> dict:
-        """Create new game state for today."""
-        return {
-            "date": self.get_today_date(),
-            "guesses": [],
-            "attempts": 0,
-            "completed": False,
-            "won": False,
-        }
-    
     def _setup_routes(self):
         """Setup FastAPI routes."""
         
@@ -102,8 +99,7 @@ class GameServer:
             token: str | None = None
         
         class GuessResponse(BaseModel):
-            result: dict
-            state: dict
+            game_state: dict
             token: str
             game_over: bool
             message: str | None = None
@@ -136,84 +132,63 @@ class GameServer:
             Process a player's guess.
             Returns updated game state in a new JWT token.
             """
-            # Verify existing token or create new game
-            if request.token:
-                state = self.verify_token(request.token)
-                if state is None:
-                    # Token expired or invalid, start new game
-                    state = self.new_game_state()
-            else:
-                state = self.new_game_state()
+            today = self.get_today_date()
+            game = self.get_game_for_date(today)
             
-            # Check if game already completed
-            if state.get("completed"):
+            # Verify existing token or create new game
+            game_state = None
+            if request.token:
+                payload = self.verify_token(request.token)
+                if payload and payload.get("date") == today:
+                    # Reconstruct GameState from JWT
+                    game_state_dict = payload.get("game_state")
+                    if game_state_dict:
+                        # Get state class from game and deserialize
+                        game_state = game.create_game_state()
+                        game_state = type(game_state).from_dict(game_state_dict)
+            
+            # Check if game already over
+            if game_state and game_state.is_game_over():
                 return GuessResponse(
-                    result={},
-                    state=state,
-                    token=self.create_token(state),
+                    game_state=game_state.to_dict(),
+                    token=self.create_token(today, game_state),
                     game_over=True,
                     message="Game already completed for today!"
                 )
             
-            # Check max attempts (6 like Wordle)
-            if state["attempts"] >= 6:
-                state["completed"] = True
-                state["won"] = False
-                # Get game instance for this date
-                game = self.get_game_for_date(state["date"])
-                return GuessResponse(
-                    result={},
-                    state=state,
-                    token=self.create_token(state),
-                    game_over=True,
-                    message=f"Game over! The word was: {game.secret}"
-                )
-            
-            # Get game instance for today (cached)
-            game = self.get_game_for_date(state["date"])
-            
-            # Process the guess (game has its own secret)
+            # Process the guess
             try:
-                result = game.check_guess(request.guess)
+                game_state = game.check_guess(request.guess, game_state)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             
-            # Update state
-            state["guesses"].append(result)
-            state["attempts"] += 1
-            
-            # Check if won
-            if result["is_correct"]:
-                state["completed"] = True
-                state["won"] = True
-                message = f"🎉 Congratulations! You won in {state['attempts']} attempts!"
-                game_over = True
-            elif state["attempts"] >= 6:
-                state["completed"] = True
-                state["won"] = False
-                message = f"Game over! The word was: {game.secret}"
-                game_over = True
+            # Generate message
+            if game_state.is_game_over():
+                if hasattr(game_state, 'won') and game_state.won:
+                    message = f"🎉 Congratulations! You won in {game_state.attempts} attempts!"
+                else:
+                    message = f"Game over! The word was: {game.secret}"
             else:
-                message = f"Attempt {state['attempts']}/6"
-                game_over = False
+                message = f"Attempt {game_state.attempts}/{game_state.max_attempts}"
             
             # Create new token with updated state
-            new_token = self.create_token(state)
+            new_token = self.create_token(today, game_state)
             
             return GuessResponse(
-                result=result,
-                state=state,
+                game_state=game_state.to_dict(),
                 token=new_token,
-                game_over=game_over,
+                game_over=game_state.is_game_over(),
                 message=message
             )
         
         @self.app.post("/api/reset")
         async def reset_game():
             """Reset game and get new token."""
-            state = self.new_game_state()
+            today = self.get_today_date()
+            game = self.get_game_for_date(today)
+            new_state = game.create_game_state()
             return {
-                "token": self.create_token(state),
+                "token": self.create_token(today, new_state),
                 "message": "Game reset for today"
             }
     

@@ -3,10 +3,7 @@ import numpy as np
 import sys
 from os.path import join as pjoin, dirname
 
-# Add src directory to path
-sys.path.insert(0, pjoin(dirname(__file__), "..", "src"))
-
-from main_cluster import reduce_dimensions_pca, cluster_with_knn, suggest_eps_values, cluster_with_kmeans
+from riddle.main_cluster import reduce_dimensions_pca, cluster_with_knn, suggest_eps_values, cluster_with_kmeans
 
 
 class TestReduceDimensionsPCA:

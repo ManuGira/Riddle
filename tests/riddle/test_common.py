@@ -6,10 +6,7 @@ import os
 from os.path import join as pjoin, dirname
 from unittest.mock import Mock, patch
 
-# Add src directory to path
-sys.path.insert(0, pjoin(dirname(__file__), "..", "src"))
-
-from common import (
+from riddle.common import (
     load_most_frequent_words,
     compute_correlation_matrix,
     compute_distance_matrix,
@@ -44,7 +41,7 @@ plusieurs
 
     def test_load_all_words(self, temp_frequency_file):
         """Test loading all words without N limit"""
-        with patch('common.pjoin') as mock_pjoin:
+        with patch('riddle.common.pjoin') as mock_pjoin:
             mock_pjoin.return_value = temp_frequency_file
             words = load_most_frequent_words(N=None)
             
@@ -60,7 +57,7 @@ plusieurs
 
     def test_load_with_limit(self, temp_frequency_file):
         """Test loading with N limit"""
-        with patch('common.pjoin') as mock_pjoin:
+        with patch('riddle.common.pjoin') as mock_pjoin:
             mock_pjoin.return_value = temp_frequency_file
             words = load_most_frequent_words(N=3)
             
@@ -71,7 +68,7 @@ plusieurs
         mock_model = Mock()
         mock_model.key_to_index = {"chat": 0, "chien": 1, "maison": 2}
         
-        with patch('common.pjoin') as mock_pjoin:
+        with patch('riddle.common.pjoin') as mock_pjoin:
             mock_pjoin.return_value = temp_frequency_file
             words = load_most_frequent_words(N=None, model=mock_model)
             
@@ -84,7 +81,7 @@ plusieurs
 
     def test_special_character_replacement(self, temp_frequency_file):
         """Test that œ is replaced with oe"""
-        with patch('common.pjoin') as mock_pjoin:
+        with patch('riddle.common.pjoin') as mock_pjoin:
             mock_pjoin.return_value = temp_frequency_file
             words = load_most_frequent_words(N=None)
             

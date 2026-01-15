@@ -4,10 +4,7 @@ from pathlib import Path
 import tempfile
 import sys
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from similarity_matrix_codec import (
+from riddle.similarity_matrix_codec import (
     FullPrecisionMatrixCodec,
     LowPrecisionMatrixCodec,
     SparseMatrixCodec,

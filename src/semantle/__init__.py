@@ -1,0 +1,1 @@
+"""Semantle game implementations."""

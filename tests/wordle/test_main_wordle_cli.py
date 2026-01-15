@@ -1,16 +1,14 @@
 """
 Unit tests for WordleCLI terminal interface.
 """
-import sys
-
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from main_wordle_game import WordleGame, WordleState, GuessResult
-from play_wordle_cli import WordleCLI, Colors
+from wordle.wordle_state import WordleState, GuessResult
+from wordle.wordle_game import WordleGame
+from wordle.main_wordle_cli import WordleCLI, Colors
 
 
 class TestWordleCLI:
@@ -197,7 +195,7 @@ class TestCLIGameIntegration:
     @pytest.fixture
     def real_game(self):
         """Create a real WordleGame for integration tests."""
-        words_file = Path(__file__).parent.parent / "data" / "english_words.txt"
+        words_file = Path(__file__).parent.parent.parent / "data" / "english_words.txt"
         return WordleGame("2026-01-12", words_file, "test-secret-key")
     
     def test_full_game_state_flow(self, real_game):

@@ -1,4 +1,4 @@
-import common as cmn
+from . import common as cmn
 import numpy as np
 from pathlib import Path
 from abc import ABC, abstractmethod
@@ -305,8 +305,9 @@ def main(D, N: int = None):
     
 
 if __name__ == '__main__':
+    main(200, N=None)
     # main(200)
-    for d in [200, 700]:
-        for n in [10, 100, 1000, 5000]:
-            print(f"Generating similarity matrices for D={d}, N={n}...")
-            main(d, N=n)
+    # for d in [200, 700]:
+    #     for n in [10, 100, 1000, 5000]:
+    #         print(f"Generating similarity matrices for D={d}, N={n}...")
+    #         main(d, N=n)

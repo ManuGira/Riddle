@@ -19,7 +19,7 @@ import time
 
 import numpy as np
 
-import common as cmn
+from . import common as cmn
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
