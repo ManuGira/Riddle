@@ -11,9 +11,7 @@ from datetime import datetime, timedelta
 import jwt
 from pathlib import Path
 
-from riddle import STATIC_FOLDER_PATH
-from .riddle_game import RiddleGame
-from .game_state import GameState
+from riddle import STATIC_FOLDER_PATH, RiddleGame, GameState
 from typing import Callable
 
 

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from riddle.server_game import GameServer
+from riddle.game_server import GameServer
 from riddle.riddle_game import RiddleGame
 from riddle.game_state import GameState
 

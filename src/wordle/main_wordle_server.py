@@ -1,9 +1,9 @@
 from pathlib import Path
-from riddle.server_game import GameServer
+from riddle.game_server import GameServer
 from wordle.wordle_game import WordleGame
 import sys
 import os
-from riddle import REPO_ROOT_PATH
+from riddle import DATA_FOLDER_PATH, REPO_ROOT_PATH
 
 
 def main():

@@ -1,4 +1,5 @@
-from . import common as cmn
+from riddle import DATA_FOLDER_PATH
+from riddle import common as cmn
 import numpy as np
 from pathlib import Path
 from abc import ABC, abstractmethod

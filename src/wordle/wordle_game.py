@@ -1,4 +1,4 @@
-from riddle.riddle_game import RiddleGame
+from riddle import RiddleGame
 from .wordle_state import WordleState, GuessResult
 import hashlib
 from pathlib import Path
