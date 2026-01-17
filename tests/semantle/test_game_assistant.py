@@ -1,12 +1,12 @@
 import pytest
 import numpy as np
 import sys
-from os.path import join as pjoin, dirname, abspath
+from os.path import join as pjoin, dirname
 
 # Add src directory to path
 sys.path.insert(0, pjoin(dirname(__file__), "..", "src"))
 
-from main_assistant import GameAssistant
+from semantle.main_assistant_semantic import GameAssistant
 
 
 class TestGameAssistant:
@@ -20,7 +20,7 @@ class TestGameAssistant:
     @pytest.fixture
     def sample_heatmap(self, sample_words):
         """Create a simple heatmap matrix for testing"""
-        n = len(sample_words)
+        len(sample_words)
         # Create a symmetric matrix with some correlation values
         matrix = np.array([
             [100, 80, 30, 20, 40],
@@ -106,7 +106,6 @@ class TestGameAssistant:
 
     def test_next_suggestion_updates(self, assistant):
         """Test that next_suggestion updates after adding words"""
-        initial_suggestion = assistant.next_suggestion
         assistant.add_word_score("chat", 85.0)
         
         # Next suggestion should be different from the observed word

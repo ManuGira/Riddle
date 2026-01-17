@@ -6,7 +6,7 @@ import seaborn as sns
 from os.path import join as pjoin
 import zlib
 
-from common import load_model, load_most_frequent_words, compute_heatmap_matrix
+from riddle.common import load_model, load_most_frequent_words, compute_heatmap_matrix
 
 
 def plot_matrix(correlation_matrix, words):

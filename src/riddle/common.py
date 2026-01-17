@@ -1,11 +1,32 @@
 import dataclasses
-import os
-import numpy as np
-from os.path import join as pjoin
-from gensim.models import KeyedVectors
-from pathlib import Path
-import urllib
 import json
+import time
+import urllib.request
+from typing import TYPE_CHECKING
+
+import numpy as np
+
+if TYPE_CHECKING:
+    from gensim.models import KeyedVectors
+
+from pathlib import Path
+
+def repo_root_path() -> Path:
+    """Get the root path of the riddle repo."""
+    repo_root = Path(__file__).parent
+    # Look for pyproject.toml
+    while not (repo_root / "pyproject.toml").exists():
+        repo_root = repo_root.parent
+        # Safety: stop at filesystem root
+        if repo_root == repo_root.parent:
+            # Fallback: assume we're in src/riddle, so go up 2 levels
+            return Path(__file__).parent.parent.parent
+    return repo_root
+
+REPO_ROOT_PATH: Path = repo_root_path()
+DATA_FOLDER_PATH: Path = REPO_ROOT_PATH / "data"
+STATIC_FOLDER_PATH: Path = REPO_ROOT_PATH / "src" / "static"
+
 
 def unit_vector(vec: np.ndarray) -> np.ndarray:
     """
@@ -17,7 +38,9 @@ def unit_vector(vec: np.ndarray) -> np.ndarray:
     Returns:
         Unit vector
     """
-    return vec / np.linalg.norm(vec, axis=1)
+    norms = np.linalg.norm(vec, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0  # prevent division by
+    return vec / norms
 
 def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
     """
@@ -45,10 +68,8 @@ def cosine_distance(vec1: np.ndarray, vec2: np.ndarray) -> float:
     """
     return 1.0 - cosine_similarity(vec1, vec2)
 
-def load_most_frequent_words(N: int = None, model=None):
-    here = os.path.abspath(os.path.dirname(__file__))
-    data_folder = pjoin(here, "..", "data")
-    freq_file = pjoin(data_folder, "french_words_5000.txt")
+def load_most_frequent_words(N: int | None = None, model: "KeyedVectors | None" = None) -> list[str]:
+    freq_file = DATA_FOLDER_PATH / "french_words_5000.txt"
 
     with open(freq_file, "r", encoding="utf-8") as f:
         words = [line.strip() for line in f.readlines()]
@@ -73,10 +94,9 @@ def load_most_frequent_words(N: int = None, model=None):
     return words[:N]
 
 
-def load_model(model_file="frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"):
-    here = os.path.abspath(os.path.dirname(__file__))
-    data_folder = pjoin(here, "..", "data")
-    model_path = pjoin(data_folder, model_file)
+def load_model(model_file="frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"):    
+    from gensim.models import KeyedVectors
+    model_path = DATA_FOLDER_PATH / model_file
 
     model = KeyedVectors.load_word2vec_format(
         model_path,
@@ -92,10 +112,12 @@ def compute_correlation_matrix(model, words):
     N = len(vectors)
     correlation_matrix = np.zeros((N, N))
     for i in range(N):
-        for j in range(N):
+        for j in range(i, N):
             correlation_matrix[i, j] = np.dot(vectors[i], vectors[j]) / (
                 np.linalg.norm(vectors[i]) * np.linalg.norm(vectors[j])
             )
+
+    correlation_matrix = correlation_matrix + correlation_matrix.T - np.diag(correlation_matrix.diagonal())
     return correlation_matrix
 
 
@@ -105,19 +127,38 @@ def compute_distance_matrix(model, words):
     N = len(vectors)
     distance_matrix = np.zeros((N, N))
     for i in range(N):
-        for j in range(N):
+        for j in range(i, N):
             distance_matrix[i, j] = np.linalg.norm(vectors[i] - vectors[j])
+
+    distance_matrix = distance_matrix + distance_matrix.T - np.diag(distance_matrix.diagonal())
     return distance_matrix
 
+def compute_similarity_matrix_fast(model, words):
+    print("Computing similarity matrix (fast)...")
+    indexes = [model.key_to_index[word] for word in words if word in model.key_to_index]
+    vectors = np.array([model.vectors[index] for index in indexes])
+    vectors = unit_vector(vectors)
+    tick = time.time()
+    similarity_matrix = np.dot(vectors, vectors.T)
+    tock = time.time()
+    print(f"Similarity matrix computed in {tock - tick:.2f} seconds.")
+    return similarity_matrix
 
 def compute_similarity_matrix(model, words):
+    print("Computing similarity matrix...")
     indexes = [model.key_to_index[word] for word in words if word in model.key_to_index]
     vectors = [model.vectors[index] for index in indexes]
     N = len(vectors)
     similarity_matrix = np.zeros((N, N))
+    tick = time.time()
     for i in range(N):
-        for j in range(N):
+        for j in range(i, N):
             similarity_matrix[i, j] = model.similarity(words[i], words[j])
+
+    similarity_matrix = similarity_matrix + similarity_matrix.T - np.diag(similarity_matrix.diagonal())
+
+    tock = time.time()
+    print(f"Similarity matrix computed in {tock - tick:.2f} seconds.")
     return similarity_matrix
 
 
@@ -126,7 +167,7 @@ def compute_heatmap_matrix(model, words):
     return compute_similarity_matrix(model, words) * 100
 
 def load_accent_to_base_map() -> dict[str, str]:
-    accent_file = Path(__file__).parent.parent / "data" / "accent_to_base.json"
+    accent_file = DATA_FOLDER_PATH / "accent_to_base.json"
     with open(accent_file, "r", encoding="utf-8") as f:
         accent_to_base_map = json.load(f)
     return accent_to_base_map
@@ -142,7 +183,7 @@ def load_base_to_accents_map() -> dict[str, str]:
 
     :return:
     """
-    accent_file = Path(__file__).parent.parent / "data" / "base_to_accents.csv"
+    accent_file = DATA_FOLDER_PATH / "base_to_accents.csv"
     base_to_accents_map = {}
     with open(accent_file, "r", encoding="utf-8") as f:
         f.readline()  # skip header
@@ -163,7 +204,7 @@ def load_letters_frequency(language:str) -> dict[str, float]:
     :param language:
     :return:
     """
-    freq_file = Path(__file__).parent.parent / "data" / f"letters_frequency.csv"
+    freq_file = DATA_FOLDER_PATH / "letters_frequency.csv"
 
     frequency_map = {}
     with open(freq_file, "r", encoding="utf-8") as f:
@@ -222,7 +263,7 @@ def load_all_words(language: str) -> list[str]:
         ),
     }
 
-    lexicon_path = Path(__file__).parent.parent / "data" / lexicon_file[language].filename
+    lexicon_path = DATA_FOLDER_PATH / lexicon_file[language].filename
 
     if not lexicon_path.exists():
         print("Downloading the lexicon...")

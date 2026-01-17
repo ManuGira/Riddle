@@ -1,10 +1,8 @@
 import pandas as pd
-import urllib.request
-from pathlib import Path
 from ortools.linear_solver import pywraplp
 import numpy as np
 import argparse
-import common as cmn
+import riddle.common as cmn
 
 
 def clean_accents(words: list[str]) -> list[str]:

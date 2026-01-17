@@ -1,0 +1,1 @@
+"""Riddle game collection."""

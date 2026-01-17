@@ -7,7 +7,7 @@ from unittest.mock import Mock
 # Add src directory to path
 sys.path.insert(0, pjoin(dirname(__file__), "..", "src"))
 
-from main_semantic_game import SemanticGame
+from semantle.main_semantle_game import SemanticGame
 
 
 class TestSemanticGame:

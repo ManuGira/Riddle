@@ -1,11 +1,10 @@
 """
 Automated player that uses the assistant to play the semantic game automatically.
 """
-import time
 import numpy as np
-from common import load_model, load_most_frequent_words, compute_heatmap_matrix
-import main_assistant as mass
-import main_semantic_game as mgame
+from riddle.common import load_model, load_most_frequent_words
+import semantle.main_assistant_semantic as mass
+import semantle.main_semantle_game as mgame
 
 
 def auto_play_game(game: mgame.SemanticGame, assistant: mass.GameAssistant, max_attempts=50, verbose=True):
@@ -112,11 +111,11 @@ def run_multiple_games(model, heatmap_matrix, words, num_games=10, max_attempts=
         else:
             results['failures'] += 1
             if not verbose:
-                print(f"✗ Failed")
+                print("✗ Failed")
 
     # Print summary statistics
     print(f"\n\n{'='*60}")
-    print(f"SUMMARY STATISTICS")
+    print("SUMMARY STATISTICS")
     print(f"{'='*60}")
     print(f"Total games played: {num_games}")
     print(f"Successes: {results['successes']} ({results['successes']/num_games*100:.1f}%)")
@@ -126,7 +125,7 @@ def run_multiple_games(model, heatmap_matrix, words, num_games=10, max_attempts=
         avg_attempts = np.mean(results['successful_attempts'])
         min_attempts = np.min(results['successful_attempts'])
         max_attempts_success = np.max(results['successful_attempts'])
-        print(f"\nSuccessful games statistics:")
+        print("\nSuccessful games statistics:")
         print(f"  Average attempts: {avg_attempts:.1f}")
         print(f"  Min attempts: {min_attempts}")
         print(f"  Max attempts: {max_attempts_success}")
@@ -154,7 +153,7 @@ def main():
     heatmap_matrix, words = mass.compute_heatmap_matrix_if_needed(words)
 
     # Run multiple games
-    results = run_multiple_games(
+    run_multiple_games(
         model, heatmap_matrix, words,
         num_games=num_games,
         max_attempts=max_attempts,
