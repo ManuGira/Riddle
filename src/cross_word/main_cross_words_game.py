@@ -1,15 +1,16 @@
 import dataclasses
-from pathlib import Path
 import enum
 import hashlib
+from pathlib import Path
+from typing import Any
 
-import numpy as np
 import coordinatus as co
+import numpy as np
 
 import riddle.common as cmn
-from riddle.riddle_game import RiddleGame
-from riddle import DATA_FOLDER_PATH 
 import riddle.similarity_matrix_codec as codec
+from riddle import DATA_FOLDER_PATH
+from riddle.riddle_game import RiddleGame
 
 SIMILARITY_MATRIX_FILE = DATA_FOLDER_PATH / "cross_words" / "similarity_matrix"
 
@@ -390,8 +391,8 @@ def generate_similarity_matrix(word_list_file: Path, D=200, percentile=95):
     print("Loading model...")
 
     model_files = {
-        200: f"frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin",
-        700: f"frWiki_no_phrase_no_postag_700_cbow_cut100.bin",
+        200: "frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin",
+        700: "frWiki_no_phrase_no_postag_700_cbow_cut100.bin",
     }
 
     model = cmn.load_model(model_files[D])
@@ -409,8 +410,6 @@ def generate_similarity_matrix(word_list_file: Path, D=200, percentile=95):
 
     N = len(words)
     print(f"Loaded {N} words.")
-
-    output_folder = DATA_FOLDER_PATH / "cross_words"
 
     sim_matrix = cmn.compute_similarity_matrix_fast(model, words)
     

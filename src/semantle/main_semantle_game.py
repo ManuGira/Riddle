@@ -1,4 +1,3 @@
-import time
 import numpy as np
 from riddle.common import load_model, load_most_frequent_words
 
@@ -40,8 +39,8 @@ class SemanticGame:
             attempt_, score_ = att_score_
             msg += f"\n{attempt_} {word_}: {score_:.2f}"
 
-        msg += f"\n----"
-        msg += f"current_score"
+        msg += "\n----"
+        msg += "current_score"
         msg += f"\n{score_msg}"
         return score, msg
 

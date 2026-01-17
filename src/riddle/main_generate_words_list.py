@@ -1,7 +1,6 @@
 import enum
-from pathlib import Path
 import pandas as pd
-from riddle import DATA_FOLDER_PATH, REPO_ROOT_PATH
+from riddle import DATA_FOLDER_PATH
 
 
 class CGram(enum.StrEnum):
@@ -86,7 +85,7 @@ def main():
     print(f"Loaded lexicon with {len(lexicon_df)} entries")
 
     # filter out non-lemmas
-    lexicon_df = lexicon_df[lexicon_df['Lexique3__islem'] == True]
+    lexicon_df = lexicon_df[lexicon_df['Lexique3__islem']]
     print(f"Filtered lexicon to {len(lexicon_df)} lemmas")
 
     # map cgram strings to enum values

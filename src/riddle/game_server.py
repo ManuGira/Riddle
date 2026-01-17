@@ -9,7 +9,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
-from pathlib import Path
 
 from riddle import STATIC_FOLDER_PATH, RiddleGame, GameState
 from typing import Callable
@@ -170,15 +169,19 @@ class GameServer:
                 # Just return current state with fresh token
                 new_token = self.create_token(today, game_state)
                 
-                if game_state.attempts == 0:
+                if hasattr(game_state, 'attempts') and game_state.attempts == 0:
                     message = "Ready to play!"
                 elif game_state.is_game_over():
                     if hasattr(game_state, 'won') and game_state.won:
-                        message = f"🎉 Game completed! You won in {game_state.attempts} attempts!"
+                        attempts_msg = f" in {game_state.attempts} attempts" if hasattr(game_state, 'attempts') else ""
+                        message = f"🎉 Game completed! You won{attempts_msg}!"
                     else:
                         message = f"Game over! The word was: {game.secret}"
                 else:
-                    message = f"Attempt {game_state.attempts}/{game_state.max_attempts}"
+                    if hasattr(game_state, 'attempts') and hasattr(game_state, 'max_attempts'):
+                        message = f"Attempt {game_state.attempts}/{game_state.max_attempts}"
+                    else:
+                        message = "Game in progress"
                 
                 return GuessResponse(
                     game_state=game_state.to_dict(),
@@ -205,11 +208,15 @@ class GameServer:
             # Generate message
             if game_state.is_game_over():
                 if hasattr(game_state, 'won') and game_state.won:
-                    message = f"🎉 Congratulations! You won in {game_state.attempts} attempts!"
+                    attempts_msg = f" in {game_state.attempts} attempts" if hasattr(game_state, 'attempts') else ""
+                    message = f"🎉 Congratulations! You won{attempts_msg}!"
                 else:
                     message = f"Game over! The word was: {game.secret}"
             else:
-                message = f"Attempt {game_state.attempts}/{game_state.max_attempts}"
+                if hasattr(game_state, 'attempts') and hasattr(game_state, 'max_attempts'):
+                    message = f"Attempt {game_state.attempts}/{game_state.max_attempts}"
+                else:
+                    message = "Game in progress"
             
             # Create new token with updated state
             new_token = self.create_token(today, game_state)
@@ -235,8 +242,8 @@ class GameServer:
     def run(self, host: str = "127.0.0.1", port: int = 8000):
         """Run the server."""
         import uvicorn
-        print(f"Starting game server...")
-        print(f"Game factory ready")
+        print("Starting game server...")
+        print("Game factory ready")
         print(f"Today's date: {self.get_today_date()}")
         # Create today's game to show secret
         today_game = self.get_game_for_date(self.get_today_date())

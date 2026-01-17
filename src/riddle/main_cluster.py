@@ -137,7 +137,7 @@ def cluster_with_knn(vectors: np.ndarray, eps: float, min_samples: int = 2) -> n
     return cluster_labels
 
 
-def cluster_with_kmeans(vectors: np.ndarray, n_clusters: int, random_state: int = None) -> np.ndarray:
+def cluster_with_kmeans(vectors: np.ndarray, n_clusters: int, random_state: int | None = None) -> tuple[np.ndarray, np.ndarray, float]:
     """
     Cluster words using k-means with cosine or euclidean distance.
     
@@ -165,7 +165,7 @@ def cluster_with_kmeans(vectors: np.ndarray, n_clusters: int, random_state: int 
     # get centroids
     centroids = kmeans.cluster_centers_
 
-    return cluster_labels, centroids, inertia
+    return cluster_labels, centroids, float(inertia) if inertia is not None else 0.0
 
 
 def compute_clusters_with_knn(vectors, words, k):
@@ -215,7 +215,7 @@ def compute_clusters_with_kmeans(vectors):
         Cluster labels using the median number of clusters
     """
 
-    logger.info(f"Trying K-Means clustering with different cluster counts...")
+    logger.info("Trying K-Means clustering with different cluster counts...")
 
     inertias = []
     n_clusters_range = [2**i for i in range(1, 10)]
@@ -290,8 +290,9 @@ def visualize_clusters(words: list[str], vectors: np.ndarray, cluster_labels: np
     raise NotImplementedError
 
 def distance_to_centroid(word_vectors: np.ndarray, centroid_vectors: np.ndarray) -> float:
+    """Compute distance to centroid."""
     # l2 norm on horizontal axis
-    pass
+    raise NotImplementedError("distance_to_centroid not yet implemented")
 
 
 def main():
@@ -306,11 +307,11 @@ def main():
     
     # Configuration
     MODEL_PATH = "frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"  # TODO: Update with actual path
-    FREQUENCY_FILE = "data/frequency.txt"
+    FREQUENCY_FILE = "data/frequency.txt"  # noqa: F841
     TOP_N_WORDS = 1000
     VARIANCE_RATIO = 0.9
-    K_NEIGHBORS = 10
-    OUTPUT_FILE = "data/word_clusters.txt"
+    K_NEIGHBORS = 10  # noqa: F841
+    OUTPUT_FILE = "data/word_clusters.txt"  # noqa: F841
     
     # Step 1: Load word2vec model
     logger.info("Loading word2vec model...")

@@ -3,7 +3,6 @@ Game state interface and utilities for state management.
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
 from typing import Any
 
 

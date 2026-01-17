@@ -23,8 +23,10 @@ dev = [
     "opencv-python>=4.11.0.86",
     "ortools>=9.15.6755",
     "pytest>=9.0.2",
+    "ruff>=0.14.13",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
+    "ty>=0.0.12",
 ]
 
 [tool.setuptools]

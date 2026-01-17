@@ -1,10 +1,13 @@
 import dataclasses
 import json
 import time
-import urllib
+import urllib.request
+from typing import TYPE_CHECKING
 
 import numpy as np
 
+if TYPE_CHECKING:
+    from gensim.models import KeyedVectors
 
 from pathlib import Path
 
@@ -65,7 +68,7 @@ def cosine_distance(vec1: np.ndarray, vec2: np.ndarray) -> float:
     """
     return 1.0 - cosine_similarity(vec1, vec2)
 
-def load_most_frequent_words(N: int = None, model=None):
+def load_most_frequent_words(N: int | None = None, model: "KeyedVectors | None" = None) -> list[str]:
     freq_file = DATA_FOLDER_PATH / "french_words_5000.txt"
 
     with open(freq_file, "r", encoding="utf-8") as f:
@@ -91,9 +94,8 @@ def load_most_frequent_words(N: int = None, model=None):
     return words[:N]
 
 
-def load_model(model_file="frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"):
+def load_model(model_file="frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"):    
     from gensim.models import KeyedVectors
-    
     model_path = DATA_FOLDER_PATH / model_file
 
     model = KeyedVectors.load_word2vec_format(
@@ -202,7 +204,7 @@ def load_letters_frequency(language:str) -> dict[str, float]:
     :param language:
     :return:
     """
-    freq_file = DATA_FOLDER_PATH / f"letters_frequency.csv"
+    freq_file = DATA_FOLDER_PATH / "letters_frequency.csv"
 
     frequency_map = {}
     with open(freq_file, "r", encoding="utf-8") as f:

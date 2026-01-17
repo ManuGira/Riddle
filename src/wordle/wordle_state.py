@@ -1,7 +1,6 @@
 from riddle.game_state import GameState
 from typing import Any
 from dataclasses import dataclass, field
-import hashlib
 
 
 @dataclass

@@ -237,7 +237,7 @@ def save_similarity_matrix(codec: ISimilarityMatrixCodec, sim_matrix: np.ndarray
     print(f"Similarity matrix saved to {filepath}.")
 
 
-def load_similarity_matrix(filepath: Path, codec: ISimilarityMatrixCodec = None) -> tuple[np.ndarray, list[str]]:
+def load_similarity_matrix(filepath: Path, codec: ISimilarityMatrixCodec | None = None) -> tuple[np.ndarray, list[str]]:
     """
     Load similarity matrix from file. If codec is not provided, automatically detects the format type.
     
@@ -274,12 +274,12 @@ def load_similarity_matrix(filepath: Path, codec: ISimilarityMatrixCodec = None)
     return sim_matrix, words
 
 
-def main(D, N: int = None):
+def main(D, N: int | None = None):
     print("Loading model...")
 
     model_files = {
-        200: f"frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin",
-        700: f"frWiki_no_phrase_no_postag_700_cbow_cut100.bin",
+        200: "frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin",
+        700: "frWiki_no_phrase_no_postag_700_cbow_cut100.bin",
     }
 
     model = cmn.load_model(model_files[D])

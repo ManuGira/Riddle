@@ -8,7 +8,7 @@ from wordle.wordle_game import WordleGame
 from wordle.wordle_state import WordleState
 from datetime import datetime
 import sys
-from riddle import DATA_FOLDER_PATH, REPO_ROOT_PATH
+from riddle import DATA_FOLDER_PATH
 
 @dataclasses.dataclass
 class Colors:
@@ -153,7 +153,6 @@ class WordleCLI:
     
     def display_defeat(self):
         """Display defeat message."""
-        state = self.game_state
         print("\n" + "💔 "*15)
         print(f"{Colors.GRAY}GAME OVER{Colors.RESET}")
         print("💔 "*15)
@@ -179,7 +178,7 @@ def main():
     print("\n🔄 Loading game...")
     game = WordleGame(today, words_file, secret_key)
     
-    print(f"✅ Game loaded!")
+    print("✅ Game loaded!")
     print(f"📊 Word pool size: {len(game.word_list)}")
     
     # Create and run CLI

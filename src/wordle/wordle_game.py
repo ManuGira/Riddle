@@ -1,4 +1,5 @@
 from riddle import RiddleGame
+from riddle import GameState
 from .wordle_state import WordleState, GuessResult
 import hashlib
 from pathlib import Path
@@ -48,7 +49,7 @@ class WordleGame(RiddleGame):
         secret_hash = hashlib.sha256(self._secret.encode()).hexdigest()
         return WordleState(max_attempts=self.MAX_ATTEMPTS, secret_hash=secret_hash)
     
-    def check_guess(self, guess: str, game_state: WordleState | None = None) -> WordleState:
+    def check_guess(self, guess: str, game_state: GameState | None = None) -> WordleState:
         """
         Check a guess against the secret word and update game state.
         
@@ -66,6 +67,8 @@ class WordleGame(RiddleGame):
         if game_state is None:
             game_state = self.create_game_state()
         else:
+            # Type narrowing: game_state must be WordleState for this game
+            assert isinstance(game_state, WordleState), "Expected WordleState"
             # Validate that game state matches current secret
             current_hash = hashlib.sha256(self._secret.encode()).hexdigest()
             if game_state.secret_hash and game_state.secret_hash != current_hash:

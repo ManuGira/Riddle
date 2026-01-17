@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from pathlib import Path
 import tempfile
-import sys
 
 from riddle.similarity_matrix_codec import (
     FullPrecisionMatrixCodec,

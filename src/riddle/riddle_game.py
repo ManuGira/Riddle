@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any
+
+from riddle import GameState
 
 
 class RiddleGame(ABC):
@@ -51,7 +52,17 @@ class RiddleGame(ABC):
         return self._date
     
     @abstractmethod
-    def check_guess(self, guess: str) -> dict[str, Any]:
+    def create_game_state(self) -> GameState:
+        """
+        Create a new initial game state.
+        
+        Returns:
+            New GameState instance for this game
+        """
+        raise NotImplementedError("create_game_state must be implemented by subclass")
+    
+    @abstractmethod
+    def check_guess(self, guess: str, game_state: GameState | None = None) -> GameState:
         """
         Process a guess and return hints/feedback.
         
