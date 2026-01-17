@@ -1,6 +1,8 @@
 from pathlib import Path
 from riddle.server_game import GameServer
 import sys
+import os
+from riddle import REPO_ROOT_PATH
 
 
 def main():
@@ -14,7 +16,7 @@ def main():
     secret_key = sys.argv[1]
     
     # Configuration (can be changed without restart - no static variables!)
-    words_file = Path(__file__).parent.parent / "data" / "english_words.txt"
+    words_file = DATA_FOLDER_PATH / "english_words.txt"
     
     # Create game factory that captures configuration
     def game_factory(date_str: str) -> WordleGame:
@@ -30,7 +32,11 @@ def main():
     print(f"⚠️  Keep the secret key private - it's used to generate daily words!")
     
     # Run the server (will create today's game and show secret for testing)
-    server.run()
+    # Get port from environment (for deployment) or use default
+    port = int(os.getenv('PORT', 8000))
+    host = os.getenv('HOST', '127.0.0.1')
+    
+    server.run(host=host, port=port)
 
 if __name__ == "__main__":
     main()

@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from riddle import DATA_FOLDER_PATH
 from wordle.wordle_state import WordleState, GuessResult
 from wordle.wordle_game import WordleGame
 from wordle.main_wordle_cli import WordleCLI, Colors
@@ -195,7 +196,7 @@ class TestCLIGameIntegration:
     @pytest.fixture
     def real_game(self):
         """Create a real WordleGame for integration tests."""
-        words_file = Path(__file__).parent.parent.parent / "data" / "english_words.txt"
+        words_file = DATA_FOLDER_PATH / "english_words.txt"
         return WordleGame("2026-01-12", words_file, "test-secret-key")
     
     def test_full_game_state_flow(self, real_game):

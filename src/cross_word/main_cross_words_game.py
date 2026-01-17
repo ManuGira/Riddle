@@ -8,9 +8,10 @@ import coordinatus as co
 
 import riddle.common as cmn
 from riddle.riddle_game import RiddleGame
+from riddle import DATA_FOLDER_PATH 
 import riddle.similarity_matrix_codec as codec
 
-SIMILARITY_MATRIX_FILE = Path(__file__).parent.parent / "data" / "cross_words" / "similarity_matrix"
+SIMILARITY_MATRIX_FILE = DATA_FOLDER_PATH / "cross_words" / "similarity_matrix"
 
 class Orientation(enum.Enum):
     HORIZONTAL = 'H'
@@ -409,7 +410,7 @@ def generate_similarity_matrix(word_list_file: Path, D=200, percentile=95):
     N = len(words)
     print(f"Loaded {N} words.")
 
-    output_folder = Path(__file__).parent.parent / "data" / "cross_words"
+    output_folder = DATA_FOLDER_PATH / "cross_words"
 
     sim_matrix = cmn.compute_similarity_matrix_fast(model, words)
     
@@ -427,7 +428,7 @@ def main():
 if __name__ == "__main__":
 
     # generate_similarity_matrix(
-    #     Path(__file__).parent.parent / "data" / "french_words_5000.txt", 
+    #     DATA_FOLDER_PATH / "french_words_5000.txt", 
     #     D=200, 
     #     percentile=95,
     # )

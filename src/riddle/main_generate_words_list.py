@@ -1,7 +1,7 @@
 import enum
 from pathlib import Path
 import pandas as pd
-from riddle import REPO_ROOT_PATH
+from riddle import DATA_FOLDER_PATH, REPO_ROOT_PATH
 
 
 class CGram(enum.StrEnum):
@@ -60,8 +60,8 @@ column_dtypes_map = {
 }
 
 def main():
-    lexicon_path = REPO_ROOT_PATH / "data" / "french_OpenLexicon.tsv"
-    output_folder_path = REPO_ROOT_PATH / "data" / "word_lists"
+    lexicon_path = DATA_FOLDER_PATH / "french_OpenLexicon.tsv"
+    output_folder_path = DATA_FOLDER_PATH / "word_lists"
     
     # Example content of french_OpenLexicon.tcv:
     """

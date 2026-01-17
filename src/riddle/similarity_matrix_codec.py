@@ -288,7 +288,7 @@ def main(D, N: int = None):
     N = len(words)
     print(f"Loaded {N} words.")
 
-    output_folder = Path(__file__).parent.parent / "data" / "similarity_matrices"
+    output_folder = DATA_FOLDER_PATH / "similarity_matrices"
 
     sim_matrix = cmn.compute_similarity_matrix_fast(model, words)
 

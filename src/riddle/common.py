@@ -1,11 +1,12 @@
 import dataclasses
-import os
-import numpy as np
-from os.path import join as pjoin
-from gensim.models import KeyedVectors
-from pathlib import Path
-import urllib
 import json
+import time
+import urllib
+
+import numpy as np
+
+from riddle import DATA_FOLDER_PATH
+
 
 def unit_vector(vec: np.ndarray) -> np.ndarray:
     """
@@ -48,9 +49,7 @@ def cosine_distance(vec1: np.ndarray, vec2: np.ndarray) -> float:
     return 1.0 - cosine_similarity(vec1, vec2)
 
 def load_most_frequent_words(N: int = None, model=None):
-    here = os.path.abspath(os.path.dirname(__file__))
-    data_folder = pjoin(here, "..", "data")
-    freq_file = pjoin(data_folder, "french_words_5000.txt")
+    freq_file = DATA_FOLDER_PATH / "french_words_5000.txt"
 
     with open(freq_file, "r", encoding="utf-8") as f:
         words = [line.strip() for line in f.readlines()]
@@ -76,9 +75,9 @@ def load_most_frequent_words(N: int = None, model=None):
 
 
 def load_model(model_file="frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin"):
-    here = os.path.abspath(os.path.dirname(__file__))
-    data_folder = pjoin(here, "..", "data")
-    model_path = pjoin(data_folder, model_file)
+    from gensim.models import KeyedVectors
+    
+    model_path = DATA_FOLDER_PATH / model_file
 
     model = KeyedVectors.load_word2vec_format(
         model_path,
@@ -117,7 +116,6 @@ def compute_distance_matrix(model, words):
 
 def compute_similarity_matrix_fast(model, words):
     print("Computing similarity matrix (fast)...")
-    import time
     indexes = [model.key_to_index[word] for word in words if word in model.key_to_index]
     vectors = np.array([model.vectors[index] for index in indexes])
     vectors = unit_vector(vectors)
@@ -129,7 +127,6 @@ def compute_similarity_matrix_fast(model, words):
 
 def compute_similarity_matrix(model, words):
     print("Computing similarity matrix...")
-    import time
     indexes = [model.key_to_index[word] for word in words if word in model.key_to_index]
     vectors = [model.vectors[index] for index in indexes]
     N = len(vectors)
@@ -151,7 +148,7 @@ def compute_heatmap_matrix(model, words):
     return compute_similarity_matrix(model, words) * 100
 
 def load_accent_to_base_map() -> dict[str, str]:
-    accent_file = Path(__file__).parent.parent / "data" / "accent_to_base.json"
+    accent_file = DATA_FOLDER_PATH / "accent_to_base.json"
     with open(accent_file, "r", encoding="utf-8") as f:
         accent_to_base_map = json.load(f)
     return accent_to_base_map
@@ -167,7 +164,7 @@ def load_base_to_accents_map() -> dict[str, str]:
 
     :return:
     """
-    accent_file = Path(__file__).parent.parent / "data" / "base_to_accents.csv"
+    accent_file = DATA_FOLDER_PATH / "base_to_accents.csv"
     base_to_accents_map = {}
     with open(accent_file, "r", encoding="utf-8") as f:
         f.readline()  # skip header
@@ -188,7 +185,7 @@ def load_letters_frequency(language:str) -> dict[str, float]:
     :param language:
     :return:
     """
-    freq_file = Path(__file__).parent.parent / "data" / f"letters_frequency.csv"
+    freq_file = DATA_FOLDER_PATH / f"letters_frequency.csv"
 
     frequency_map = {}
     with open(freq_file, "r", encoding="utf-8") as f:
@@ -247,7 +244,7 @@ def load_all_words(language: str) -> list[str]:
         ),
     }
 
-    lexicon_path = Path(__file__).parent.parent / "data" / lexicon_file[language].filename
+    lexicon_path = DATA_FOLDER_PATH / lexicon_file[language].filename
 
     if not lexicon_path.exists():
         print("Downloading the lexicon...")

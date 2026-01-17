@@ -8,7 +8,7 @@ from wordle.wordle_game import WordleGame
 from wordle.wordle_state import WordleState
 from datetime import datetime
 import sys
-from riddle import REPO_ROOT_PATH
+from riddle import DATA_FOLDER_PATH, REPO_ROOT_PATH
 
 @dataclasses.dataclass
 class Colors:
@@ -172,7 +172,7 @@ def main():
         secret_key = sys.argv[1]
     
     # Configuration
-    words_file = REPO_ROOT_PATH / "data" / "english_words.txt"
+    words_file = DATA_FOLDER_PATH / "english_words.txt"
     today = datetime.now().strftime("%Y-%m-%d")
     
     # Create game for today

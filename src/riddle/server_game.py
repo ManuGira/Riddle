@@ -5,10 +5,13 @@ Completely game-agnostic - works with any RiddleGame implementation.
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import jwt
 from pathlib import Path
+
+from riddle import STATIC_FOLDER_PATH
 from .riddle_game import RiddleGame
 from .game_state import GameState
 from typing import Callable
@@ -107,7 +110,7 @@ class GameServer:
         @self.app.get("/")
         async def read_root():
             """Serve the main game page."""
-            html_file = Path(__file__).parent.parent / "static" / "index.html"
+            html_file = STATIC_FOLDER_PATH / "index.html"
             try:
                 with open(html_file, "r", encoding="utf-8") as f:
                     return HTMLResponse(content=f.read())
