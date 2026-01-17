@@ -1,6 +1,7 @@
 from riddle.game_state import GameState
 from typing import Any
 from dataclasses import dataclass, field
+import hashlib
 
 
 @dataclass
@@ -20,6 +21,7 @@ class WordleState(GameState):
     won: bool = False
     lost: bool = False
     game_over: bool = False
+    secret_hash: str = ""  # SHA256 hash of the secret word
     
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JWT encoding."""
@@ -36,7 +38,8 @@ class WordleState(GameState):
             'max_attempts': self.max_attempts,
             'won': self.won,
             'lost': self.lost,
-            'game_over': self.game_over
+            'game_over': self.game_over,
+            'secret_hash': self.secret_hash
         }
     
     @classmethod
@@ -57,7 +60,8 @@ class WordleState(GameState):
             max_attempts=data.get('max_attempts', 6),
             won=data.get('won', False),
             lost=data.get('lost', False),
-            game_over=data.get('game_over', False)
+            game_over=data.get('game_over', False),
+            secret_hash=data.get('secret_hash', '')
         )
     
     def is_game_over(self) -> bool:

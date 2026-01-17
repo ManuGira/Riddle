@@ -45,7 +45,8 @@ class WordleGame(RiddleGame):
         Returns:
             New WordleState instance
         """
-        return WordleState(max_attempts=self.MAX_ATTEMPTS)
+        secret_hash = hashlib.sha256(self._secret.encode()).hexdigest()
+        return WordleState(max_attempts=self.MAX_ATTEMPTS, secret_hash=secret_hash)
     
     def check_guess(self, guess: str, game_state: WordleState | None = None) -> WordleState:
         """
@@ -65,6 +66,11 @@ class WordleGame(RiddleGame):
         if game_state is None:
             game_state = self.create_game_state()
         else:
+            # Validate that game state matches current secret
+            current_hash = hashlib.sha256(self._secret.encode()).hexdigest()
+            if game_state.secret_hash and game_state.secret_hash != current_hash:
+                raise ValueError("Game state is for a different word. Please reset.")
+            
             # Create a copy to avoid mutation (dataclass is mutable)
             game_state = WordleState(
                 guesses=game_state.guesses.copy(),
@@ -72,7 +78,8 @@ class WordleGame(RiddleGame):
                 max_attempts=game_state.max_attempts,
                 won=game_state.won,
                 lost=game_state.lost,
-                game_over=game_state.game_over
+                game_over=game_state.game_over,
+                secret_hash=game_state.secret_hash or current_hash
             )
         
         # Check if game is over

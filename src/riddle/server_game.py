@@ -134,6 +134,7 @@ class GameServer:
             """
             Process a player's guess.
             Returns updated game state in a new JWT token.
+            Empty guess validates token without consuming an attempt.
             """
             today = self.get_today_date()
             game = self.get_game_for_date(today)
@@ -149,6 +150,41 @@ class GameServer:
                         # Get state class from game and deserialize
                         game_state = game.create_game_state()
                         game_state = type(game_state).from_dict(game_state_dict)
+                        
+                        # Validate secret hash
+                        import hashlib
+                        current_hash = hashlib.sha256(game.secret.encode()).hexdigest()
+                        
+                        if hasattr(game_state, 'secret_hash') and game_state.secret_hash:
+                            if game_state.secret_hash != current_hash:
+                                # Hash mismatch - game changed, reset
+                                game_state = None
+            
+            # If no valid game state, create new one
+            if game_state is None:
+                game_state = game.create_game_state()
+            
+            # Handle empty guess (validation only - doesn't consume attempt)
+            if not request.guess or request.guess.strip() == "":
+                # Just return current state with fresh token
+                new_token = self.create_token(today, game_state)
+                
+                if game_state.attempts == 0:
+                    message = "Ready to play!"
+                elif game_state.is_game_over():
+                    if hasattr(game_state, 'won') and game_state.won:
+                        message = f"🎉 Game completed! You won in {game_state.attempts} attempts!"
+                    else:
+                        message = f"Game over! The word was: {game.secret}"
+                else:
+                    message = f"Attempt {game_state.attempts}/{game_state.max_attempts}"
+                
+                return GuessResponse(
+                    game_state=game_state.to_dict(),
+                    token=new_token,
+                    game_over=game_state.is_game_over(),
+                    message=message
+                )
             
             # Check if game already over
             if game_state and game_state.is_game_over():

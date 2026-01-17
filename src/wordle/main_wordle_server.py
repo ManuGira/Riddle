@@ -1,19 +1,24 @@
 from pathlib import Path
 from riddle.server_game import GameServer
+from wordle.wordle_game import WordleGame
 import sys
 import os
 from riddle import REPO_ROOT_PATH
 
 
 def main():
-    # Get secret key from command line argument
-    if len(sys.argv) < 2:
-        print("Usage: uv run src/main_wordle_game.py <SECRET_KEY>")
-        print("Example: uv run src/main_wordle_game.py my-super-secret-password-2026")
+    # Get secret key from environment variable or command line
+    secret_key = os.getenv('SECRET_KEY')
+    
+    if not secret_key and len(sys.argv) >= 2:
+        secret_key = sys.argv[1]
+    
+    if not secret_key:
+        print("Usage: uv run src/wordle/main_wordle_server.py <SECRET_KEY>")
+        print("Or set SECRET_KEY environment variable")
+        print("Example: uv run src/wordle/main_wordle_server.py my-super-secret-password-2026")
         print("\nWARNING: Keep SECRET_KEY private! Don't commit it to git.")
         sys.exit(1)
-    
-    secret_key = sys.argv[1]
     
     # Configuration (can be changed without restart - no static variables!)
     words_file = DATA_FOLDER_PATH / "english_words.txt"
