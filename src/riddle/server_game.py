@@ -40,6 +40,9 @@ class GameServer:
         # Cache game instances by date (max 7 days)
         self._game_cache: dict[str, RiddleGame] = {}
         
+        # Mount static files directory
+        self.app.mount("/static", StaticFiles(directory=str(STATIC_FOLDER_PATH)), name="static")
+        
         self._setup_routes()
     
     def get_game_for_date(self, date_str: str) -> RiddleGame:
