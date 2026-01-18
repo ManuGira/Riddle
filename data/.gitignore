@@ -2,4 +2,6 @@
 *
 !*.csv
 !*.json
+!french_words_5000.txt
+!english_words.txt
 !.gitignore
