@@ -2,7 +2,7 @@ services:
   - type: web
     name: wordle-game
     env: python
-    buildCommand: uv sync
+    buildCommand: uv sync --frozen --no-dev && uv cache prune --ci
     startCommand: uv run src/wordle/main_wordle_server.py
     envVars:
       - key: PYTHON_VERSION

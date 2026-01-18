@@ -42,7 +42,7 @@ def main():
     # Run the server (will create today's game and show secret for testing)
     # Get port from environment (for deployment) or use default
     port = int(os.getenv('PORT', 8000))
-    host = os.getenv('HOST', '127.0.0.1')
+    host = os.getenv('HOST', '0.0.0.0')
     
     server.run(host=host, port=port)
 

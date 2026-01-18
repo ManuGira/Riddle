@@ -44,12 +44,9 @@
    - Click "Save Changes"
    
    **Generate a secure SECRET_KEY:**
-   ```bash
+   ```powershell
    # PowerShell
-   -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-   
-   # Or Python
-   python -c "import secrets; print(secrets.token_urlsafe(32))"
+   uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
    ```
    
    ⚠️ **Never commit this key to Git!** It stays only in Render's dashboard.
