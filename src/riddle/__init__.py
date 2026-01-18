@@ -17,5 +17,8 @@ from .game_server import GameServer
 
 from . import similarity_matrix_codec
 
+from . import lexicon_parser
+from .lexicon_parser import LexiconFR, LexiconEN, Language, Grammar
+
 # Deactivate `from riddle import *` behavior
 __all__ = []
