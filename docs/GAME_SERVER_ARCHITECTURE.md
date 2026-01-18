@@ -4,7 +4,9 @@
 
 Stateless game server using **FastAPI** + **JWT tokens** for session management. No database required.
 
-**Key optimization**: Server caches game instances (one per date) to avoid expensive regeneration on every guess.
+**Key optimization**: Server caches game instances (one per date per game) to avoid expensive regeneration on every guess.
+
+**Multi-game support**: Run multiple games simultaneously with URL-based routing (e.g., `/wordle-en-5` and `/wordle-fr-5`).
 
 ## Architecture Principle
 
@@ -14,11 +16,19 @@ Stateless game server using **FastAPI** + **JWT tokens** for session management.
 Client → Server (with JWT) → Process → Server → Client (with new JWT)
 ```
 
-**Instance-per-Date**: Server maintains a cache of game instances, one for each date.
+**Instance-per-Date-per-Game**: Server maintains a cache of game instances, one for each (slug, date) pair.
 
 ```
-Server creates/retrieves: GameInstance("2026-01-12") → each instance stores its secret
+Server creates/retrieves: 
+  GameInstance("wordle-en-5", "2026-01-12") → English Wordle for Jan 12
+  GameInstance("wordle-fr-5", "2026-01-12") → French Wordle for Jan 12
 ```
+
+**URL-based Routing**: Each game has its own URL slug and API endpoints:
+- `GET /{slug}` → Game page
+- `POST /{slug}/api/guess` → Submit guess
+- `POST /{slug}/api/reset` → Reset game
+- `GET /{slug}/api/info` → Game info
 
 ## File Structure
 
@@ -327,6 +337,7 @@ It can be run in CLI mode via [main_wordle_cli.py](../src/wordle/main_wordle_cli
 - **Allows hot reloading**: Update word file, next instance uses new words
 - **Secret key from CLI**: Never in source code (open source safe)
 - **Factory closure**: Captures configuration (words_file, secret_key)
+- **Slug-based routing**: Each game gets its own URL path and API endpoints
 
 **To create your own game:**
 1. Create new file (e.g., `my_game.py`)
@@ -338,7 +349,27 @@ It can be run in CLI mode via [main_wordle_cli.py](../src/wordle/main_wordle_cli
 7. Implement `check_guess(guess, game_state)` - validate, update state, determine win/loss
 8. Load resources per-instance (no static variables for hot reload)
 9. Create factory function that captures configuration
-10. Pass factory to `GameServer(factory)`
+10. Pass `(slug, factory)` tuples to `GameServer([("my-game", factory)])`
+
+**Multi-game Example:**
+```python
+# Create multiple game factories
+def english_wordle_factory(date_str: str) -> WordleGame:
+    return WordleGame(date_str, english_words_file, secret_key)
+
+def french_wordle_factory(date_str: str) -> WordleGame:
+    return WordleGame(date_str, french_words_file, secret_key)
+
+# Register both with unique slugs
+server = GameServer([
+    ("wordle-en-5", english_wordle_factory),
+    ("wordle-fr-5", french_wordle_factory)
+])
+```
+
+This creates:
+- `https://yoursite.com/wordle-en-5` → English Wordle
+- `https://yoursite.com/wordle-fr-5` → French Wordle
 
 **Pattern:**
 - **Dataclass for state**: Type-safe properties, built-in serialization
@@ -400,6 +431,16 @@ uv run src/my_game/main_server.py <args>
 ```
 
 Server starts at: http://127.0.0.1:8000
+
+**Default setup** creates a single game at `/wordle-en-5`.
+
+**Root endpoint** (`/`) lists all available games.
+
+**Each game** gets its own URL:
+- `http://127.0.0.1:8000/wordle-en-5` → Game page
+- `http://127.0.0.1:8000/wordle-en-5/api/guess` → API endpoint
+- `http://127.0.0.1:8000/wordle-en-5/api/info` → Game info
+- `http://127.0.0.1:8000/wordle-en-5/api/reset` → Reset endpoint
 
 **⚠️ IMPORTANT: Secret Key**
 - Required as command-line argument

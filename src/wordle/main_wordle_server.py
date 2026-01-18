@@ -30,8 +30,8 @@ def main():
     def game_factory(date_str: str) -> WordleGame:
         return WordleGame(date_str, words_file, secret_key)
     
-    # Create server with factory (wrapped in list for multi-game support)
-    server = GameServer([game_factory])
+    # Create server with slug and factory
+    server = GameServer([("wordle-en-5", game_factory)])
     
     print("🎮 Wordle Server Starting...")
     print(f"📁 Word list: {words_file}")

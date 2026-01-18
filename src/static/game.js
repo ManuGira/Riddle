@@ -3,6 +3,8 @@
 
 class WordleGame {
     constructor() {
+        // Get base path from injected global variable (defaults to '' for root)
+        this.basePath = window.GAME_BASE_PATH || '';
         this.token = this.loadToken();
         this.gameState = null;
         this.gameInfo = null;
@@ -30,6 +32,11 @@ class WordleGame {
         this.letterStatus = {}; // Track letter statuses for keyboard coloring
         
         this.init();
+    }
+    
+    getApiUrl(endpoint) {
+        // Construct full API URL using base path
+        return `${this.basePath}${endpoint}`;
     }
     
     async init() {
@@ -118,7 +125,7 @@ class WordleGame {
     
     async loadGameInfo() {
         try {
-            const response = await fetch('/api/info');
+            const response = await fetch(this.getApiUrl('/api/info'));
             this.gameInfo = await response.json();
             this.dateDisplay.textContent = `📅 ${this.gameInfo.date}`;
         } catch (error) {
@@ -216,7 +223,7 @@ class WordleGame {
         this.submitButton.disabled = true;
         
         try {
-            const response = await fetch('/api/guess', {
+            const response = await fetch(this.getApiUrl('/api/guess'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -273,7 +280,7 @@ class WordleGame {
         // Send empty guess to validate token and restore state
         // This doesn't consume an attempt
         try {
-            const response = await fetch('/api/guess', {
+            const response = await fetch(this.getApiUrl('/api/guess'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -320,7 +327,7 @@ class WordleGame {
         }
         
         try {
-            const response = await fetch('/api/reset', {
+            const response = await fetch(this.getApiUrl('/api/reset'), {
                 method: 'POST',
             });
             
