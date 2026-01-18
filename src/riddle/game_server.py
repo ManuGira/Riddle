@@ -239,7 +239,7 @@ class GameServer:
                 "message": "Game reset for today"
             }
     
-    def run(self, host: str = "127.0.0.1", port: int = 8000):
+    def run(self, host: str, port: int):
         """Run the server."""
         import uvicorn
         print("Starting game server...")
