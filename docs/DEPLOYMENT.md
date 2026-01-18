@@ -28,33 +28,25 @@
 
 2. **Sign up on Render.com**
    - Go to https://render.com
-   - Sign up with your GitHub account
-
-3. **Create a new Web Service**
-   - Click "New +" → "Web Service"
-   - Connect your GitHub repository
-   - Select your "riddle-game" repository
-   - Render will auto-detect the `render.yaml` file
-
-4. **Set SECRET_KEY Environment Variable** (IMPORTANT!)
-   - After creating the service, go to **Environment** tab
-   - Click "Add Environment Variable"
-   - **Name**: `SECRET_KEY`
-   - **Value**: Generate a random string (see below)
-   - Click "Save Changes"
-   
-   **Generate a secure SECRET_KEY:**
+   - **Create a new Web Service**
+      - Click "New +" → "Web Service"
+      - Enter URL of your "Riddle" github repository (if repo is private, connect Render to GitHub)
+      - Set build command: `uv sync --frozen --no-dev && uv cache prune --ci`
+      - Set start command: `uv run --no-dev src/wordle/main_wordle_server.py`
+      - Add environment variables:
+         - **PORT**: `10000` (This is required by Render)
+         - **SECRET_KEY**: Choose a secure random string. 
    ```powershell
    # PowerShell
    uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
    ```
-   
+  
    ⚠️ **Never commit this key to Git!** It stays only in Render's dashboard.
 
-5. **Deploy**
+4. **Deploy**
    - Service will auto-deploy after adding SECRET_KEY
    - Wait 2-3 minutes for deployment
-   - Your game will be live at: `https://wordle-game-XXXX.onrender.com`
+   - Your game will be live at: `https://riddle-XXXX.onrender.com`
    
    **Note**: Render detects `uv.lock` and automatically uses `uv` for faster builds!
 
