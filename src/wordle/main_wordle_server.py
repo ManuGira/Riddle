@@ -42,16 +42,18 @@ def main():
     # Run the server (will create today's game and show secret for testing)
     # Get port from environment (for deployment) or use default
     host: str
-    if os.getenv('HOST'):
-        host = os.getenv('HOST')
+    host_env = os.getenv('HOST')
+    if host_env:
+        host = host_env
         print(f"🚀 Using 'HOST' from environment: {host}")
     else:
         host = '127.0.0.1'
         print(f"🚀 'HOST' not found in environment. Using default host: {host}")
     
     port: int
-    if os.getenv('PORT'):
-        port = int(os.getenv('PORT'))
+    port_env = os.getenv('PORT')
+    if port_env:
+        port = int(port_env)
         print(f"🚀 Using 'PORT' from environment: {port}")
     else:
         port = 8000
