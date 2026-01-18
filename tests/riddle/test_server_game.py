@@ -45,33 +45,61 @@ class TestGameServer:
         return factory
     
     @pytest.fixture
+    def mock_game_factory_2(self):
+        """Create a second mock game factory for multi-game testing."""
+        def factory(date_str):
+            game = Mock(spec=RiddleGame)
+            game.secret = "HOUSE"
+            # Configure mock methods properly
+            game.create_game_state = Mock(return_value=MockGameState())
+            game.check_guess = Mock(return_value=MockGameState(attempts=1))
+            return game
+        return factory
+    
+    @pytest.fixture
     def server(self, mock_game_factory):
-        """Create GameServer instance."""
-        return GameServer(mock_game_factory, secret_key="test-secret-key")
+        """Create GameServer instance with single game."""
+        return GameServer([mock_game_factory], secret_key="test-secret-key")
+    
+    @pytest.fixture
+    def multi_server(self, mock_game_factory, mock_game_factory_2):
+        """Create GameServer instance with multiple games."""
+        return GameServer([mock_game_factory, mock_game_factory_2], secret_key="test-secret-key")
     
     def test_server_initialization(self, server):
         """Test server initializes correctly."""
-        assert server.game_factory is not None
+        assert len(server.game_factories) == 1
         assert server.secret_key == "test-secret-key"
         assert server.algorithm == "HS256"
         assert len(server._game_cache) == 0
     
     def test_game_caching(self, server):
-        """Test game instances are cached by date."""
-        game1 = server.get_game_for_date("2026-01-12")
-        game2 = server.get_game_for_date("2026-01-12")
-        game3 = server.get_game_for_date("2026-01-13")
+        """Test game instances are cached by (game_id, date) tuple."""
+        game1 = server.get_game_for_date(0, "2026-01-12")
+        game2 = server.get_game_for_date(0, "2026-01-12")
+        game3 = server.get_game_for_date(0, "2026-01-13")
         
-        assert game1 is game2  # Same instance for same date
+        assert game1 is game2  # Same instance for same game_id and date
         assert game1 is not game3  # Different instance for different date
         assert len(server._game_cache) == 2
     
     def test_cache_limit(self, server):
-        """Test cache keeps only last 7 days."""
+        """Test cache keeps only last 7 days per game."""
         for i in range(10):
-            server.get_game_for_date(f"2026-01-{i+1:02d}")
+            server.get_game_for_date(0, f"2026-01-{i+1:02d}")
         
-        assert len(server._game_cache) <= 7
+        # Should keep only 7 days for game_id=0
+        game_0_entries = [k for k in server._game_cache.keys() if k[0] == 0]
+        assert len(game_0_entries) <= 7
+    
+    def test_multi_game_caching(self, multi_server):
+        """Test multiple games can be cached independently."""
+        game1 = multi_server.get_game_for_date(0, "2026-01-12")
+        game2 = multi_server.get_game_for_date(1, "2026-01-12")
+        
+        assert game1 is not game2  # Different games for different game_ids
+        assert game1.secret == "CRANE"
+        assert game2.secret == "HOUSE"
     
     def test_get_today_date(self, server):
         """Test getting today's date string."""
@@ -90,19 +118,21 @@ class TestGameServer:
         assert midnight - now < 86400
     
     def test_token_creation_and_verification(self, server, monkeypatch):
-        """Test JWT token creation and verification."""
+        """Test JWT token creation and verification with game_id."""
         # Mock today's date to match token date
         monkeypatch.setattr(server, 'get_today_date', lambda: "2026-01-12")
         
         state = MockGameState(attempts=3)
         date = "2026-01-12"
+        game_id = 0
         
-        token = server.create_token(date, state)
+        token = server.create_token(date, game_id, state)
         assert isinstance(token, str)
         
         payload = server.verify_token(token)
         assert payload is not None
         assert payload["date"] == date
+        assert payload["game_id"] == game_id
         assert payload["game_state"]["attempts"] == 3
     
     def test_token_expiration(self, server):
@@ -111,7 +141,7 @@ class TestGameServer:
         
         # Create token with past expiration
         import jwt
-        payload = {"date": "2026-01-01", "game_state": state.to_dict(), "exp": 0}
+        payload = {"date": "2026-01-01", "game_id": 0, "game_state": state.to_dict(), "exp": 0}
         expired_token = jwt.encode(payload, server.secret_key, algorithm=server.algorithm)
         
         result = server.verify_token(expired_token)
@@ -122,7 +152,25 @@ class TestGameServer:
         state = MockGameState()
         yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         
-        token = server.create_token(yesterday, state)
+        token = server.create_token(yesterday, 0, state)
         result = server.verify_token(token)
         
         assert result is None  # Token for yesterday, not today
+    
+    def test_token_invalid_game_id(self, server):
+        """Test token with invalid game_id returns None."""
+        state = MockGameState()
+        today = server.get_today_date()
+        
+        # Create token with game_id beyond available factories
+        import jwt
+        payload = {
+            "date": today,
+            "game_id": 99,  # Invalid - only have 1 factory
+            "game_state": state.to_dict(),
+            "exp": server.get_midnight_timestamp()
+        }
+        invalid_token = jwt.encode(payload, server.secret_key, algorithm=server.algorithm)
+        
+        result = server.verify_token(invalid_token)
+        assert result is None

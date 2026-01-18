@@ -1,6 +1,7 @@
 """
 Stateless Wordle-like game server using JWT for session management.
 Completely game-agnostic - works with any RiddleGame implementation.
+Supports multiple game instances simultaneously (e.g., French and English Wordle).
 """
 
 from fastapi import FastAPI, HTTPException
@@ -19,49 +20,67 @@ class GameServer:
     
     def __init__(
         self, 
-        game_factory: Callable[[str], RiddleGame],
+        game_factories: list[Callable[[str], RiddleGame]],
         secret_key: str = "your-secret-key-change-this-in-production"
     ):
         """
-        Initialize server with a game factory.
+        Initialize server with multiple game factories.
         
         Args:
-            game_factory: Callable that takes a date string and returns a RiddleGame instance
+            game_factories: List of callables that take a date string and return a RiddleGame instance
             secret_key: JWT signing key (change in production)
         """
-        self.game_factory = game_factory
+        self.game_factories = game_factories
         self.secret_key = secret_key
         self.algorithm = "HS256"
         self.app = FastAPI()
         
-        # Cache game instances by date (max 7 days)
-        self._game_cache: dict[str, RiddleGame] = {}
+        # Cache game instances by (game_id, date) tuple
+        self._game_cache: dict[tuple[int, str], RiddleGame] = {}
+        
+        # Counter for generating game IDs
+        self._game_id_counter = 0
         
         # Mount static files directory
         self.app.mount("/static", StaticFiles(directory=str(STATIC_FOLDER_PATH)), name="static")
         
         self._setup_routes()
     
-    def get_game_for_date(self, date_str: str) -> RiddleGame:
+    def get_next_game_id(self) -> int:
+        """Generate a unique game ID."""
+        game_id = self._game_id_counter
+        self._game_id_counter += 1
+        return game_id
+    
+    def get_game_for_date(self, game_id: int, date_str: str) -> RiddleGame:
         """
-        Get or create a game instance for a specific date.
+        Get or create a game instance for a specific game ID and date.
         
         Args:
+            game_id: The game instance ID
             date_str: Date in format "YYYY-MM-DD"
             
         Returns:
-            RiddleGame instance for that date (cached)
+            RiddleGame instance for that game ID and date (cached)
         """
-        if date_str not in self._game_cache:
-            # Create new game instance for this date
-            self._game_cache[date_str] = self.game_factory(date_str)
-            
-            # Prevent memory leak: keep only last 7 days
-            if len(self._game_cache) > 7:
-                oldest_date = min(self._game_cache.keys())
-                del self._game_cache[oldest_date]
+        cache_key = (game_id, date_str)
         
-        return self._game_cache[date_str]
+        if cache_key not in self._game_cache:
+            # Validate game_id
+            if game_id < 0 or game_id >= len(self.game_factories):
+                raise ValueError(f"Invalid game_id: {game_id}")
+            
+            # Create new game instance for this game_id and date
+            self._game_cache[cache_key] = self.game_factories[game_id](date_str)
+            
+            # Prevent memory leak: keep only last 7 days per game
+            # Remove old entries for this specific game_id
+            game_dates = [key for key in self._game_cache.keys() if key[0] == game_id]
+            if len(game_dates) > 7:
+                oldest_key = min(game_dates, key=lambda k: k[1])
+                del self._game_cache[oldest_key]
+        
+        return self._game_cache[cache_key]
     
     def get_today_date(self) -> str:
         """Get today's date as string."""
@@ -73,10 +92,11 @@ class GameServer:
         midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         return int(midnight.timestamp())
     
-    def create_token(self, date: str, game_state: GameState) -> str:
-        """Create JWT token with game state."""
+    def create_token(self, date: str, game_id: int, game_state: GameState) -> str:
+        """Create JWT token with game state and game ID."""
         payload = {
             "date": date,
+            "game_id": game_id,
             "game_state": game_state.to_dict()
         }
         payload["exp"] = self.get_midnight_timestamp()
@@ -89,6 +109,10 @@ class GameServer:
             # Check if token is for today's date
             if payload.get("date") != self.get_today_date():
                 return None
+            # Validate game_id exists
+            game_id = payload.get("game_id")
+            if game_id is None or game_id < 0 or game_id >= len(self.game_factories):
+                return None
             return payload
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return None
@@ -99,11 +123,13 @@ class GameServer:
         # API Models
         class GuessRequest(BaseModel):
             guess: str
+            game_id: int | None = None  # Game ID for new game, or extracted from token
             token: str | None = None
         
         class GuessResponse(BaseModel):
             game_state: dict
             token: str
+            game_id: int
             game_over: bool
             message: str | None = None
         
@@ -122,9 +148,10 @@ class GameServer:
         
         @self.app.get("/api/info")
         async def get_game_info():
-            """Get general game information (no spoilers)."""
+            """Get general game information for all available games."""
             return {
                 "date": self.get_today_date(),
+                "games_count": len(self.game_factories),
                 "word_length": 5,
                 "max_attempts": 6,
             }
@@ -132,21 +159,25 @@ class GameServer:
         @self.app.post("/api/guess", response_model=GuessResponse)
         async def make_guess(request: GuessRequest):
             """
-            Process a player's guess.
+            Process a player's guess for a specific game.
             Returns updated game state in a new JWT token.
             Empty guess validates token without consuming an attempt.
             """
             today = self.get_today_date()
-            game = self.get_game_for_date(today)
             
-            # Verify existing token or create new game
+            # Determine game_id: from token if present, otherwise from request
+            game_id = None
             game_state = None
+            
             if request.token:
                 payload = self.verify_token(request.token)
                 if payload and payload.get("date") == today:
+                    game_id = payload.get("game_id")
                     # Reconstruct GameState from JWT
                     game_state_dict = payload.get("game_state")
-                    if game_state_dict:
+                    if game_state_dict and game_id is not None:
+                        # Get game instance
+                        game = self.get_game_for_date(game_id, today)
                         # Get state class from game and deserialize
                         game_state = game.create_game_state()
                         game_state = type(game_state).from_dict(game_state_dict)
@@ -160,6 +191,20 @@ class GameServer:
                                 # Hash mismatch - game changed, reset
                                 game_state = None
             
+            # If no valid game_id from token, use request.game_id or default to 0
+            if game_id is None:
+                game_id = request.game_id if request.game_id is not None else 0
+                
+            # Validate game_id
+            if game_id < 0 or game_id >= len(self.game_factories):
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Invalid game_id: {game_id}. Must be between 0 and {len(self.game_factories) - 1}"
+                )
+            
+            # Get game instance
+            game = self.get_game_for_date(game_id, today)
+            
             # If no valid game state, create new one
             if game_state is None:
                 game_state = game.create_game_state()
@@ -167,7 +212,7 @@ class GameServer:
             # Handle empty guess (validation only - doesn't consume attempt)
             if not request.guess or request.guess.strip() == "":
                 # Just return current state with fresh token
-                new_token = self.create_token(today, game_state)
+                new_token = self.create_token(today, game_id, game_state)
                 
                 if hasattr(game_state, 'attempts') and game_state.attempts == 0:
                     message = "Ready to play!"
@@ -186,6 +231,7 @@ class GameServer:
                 return GuessResponse(
                     game_state=game_state.to_dict(),
                     token=new_token,
+                    game_id=game_id,
                     game_over=game_state.is_game_over(),
                     message=message
                 )
@@ -194,7 +240,8 @@ class GameServer:
             if game_state and game_state.is_game_over():
                 return GuessResponse(
                     game_state=game_state.to_dict(),
-                    token=self.create_token(today, game_state),
+                    token=self.create_token(today, game_id, game_state),
+                    game_id=game_id,
                     game_over=True,
                     message="Game already completed for today!"
                 )
@@ -219,34 +266,44 @@ class GameServer:
                     message = "Game in progress"
             
             # Create new token with updated state
-            new_token = self.create_token(today, game_state)
+            new_token = self.create_token(today, game_id, game_state)
             
             return GuessResponse(
                 game_state=game_state.to_dict(),
                 token=new_token,
+                game_id=game_id,
                 game_over=game_state.is_game_over(),
                 message=message
             )
         
         @self.app.post("/api/reset")
-        async def reset_game():
-            """Reset game and get new token."""
+        async def reset_game(game_id: int = 0):
+            """Reset game for a specific game ID and get new token."""
+            # Validate game_id
+            if game_id < 0 or game_id >= len(self.game_factories):
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Invalid game_id: {game_id}. Must be between 0 and {len(self.game_factories) - 1}"
+                )
+            
             today = self.get_today_date()
-            game = self.get_game_for_date(today)
+            game = self.get_game_for_date(game_id, today)
             new_state = game.create_game_state()
             return {
-                "token": self.create_token(today, new_state),
-                "message": "Game reset for today"
+                "token": self.create_token(today, game_id, new_state),
+                "game_id": game_id,
+                "message": f"Game {game_id} reset for today"
             }
     
     def run(self, host: str, port: int):
         """Run the server."""
         import uvicorn
         print("Starting game server...")
-        print("Game factory ready")
+        print(f"Number of game factories: {len(self.game_factories)}")
         print(f"Today's date: {self.get_today_date()}")
-        # Create today's game to show secret
-        today_game = self.get_game_for_date(self.get_today_date())
-        print(f"Today's secret (for testing): {today_game.secret}")
+        # Create today's games to show secrets
+        for i, factory in enumerate(self.game_factories):
+            game = self.get_game_for_date(i, self.get_today_date())
+            print(f"Game {i} - Today's secret (for testing): {game.secret}")
         uvicorn.run(self.app, host=host, port=port)
 
