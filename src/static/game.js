@@ -33,6 +33,13 @@ class WordleGame {
     }
     
     async init() {
+        // Detect mobile device and set input readonly accordingly
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile) {
+            // On desktop, allow typing in input field
+            this.input.removeAttribute('readonly');
+        }
+        
         // Setup event listeners
         this.setupEventListeners();
         
