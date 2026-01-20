@@ -1,12 +1,23 @@
 
-from riddle import DATA_FOLDER_PATH
-from riddle.lexicon_parser import LexiconFR, LexiconEN, Language, HeadersDF, Grammar
+from riddle import DATA_FOLDER_PATH, Language
+from riddle.lexicon_parser import LexiconFR, LexiconEN, HeadersDF, Grammar
 import pandas as pd
 from wordle import get_wordle_word_list_filepath, get_lexicon_path
 from pathlib import Path
 
 
-def main(language: Language = Language.FR, word_length: int = 5):
+def main(language: Language = Language.FR, word_length: int = 5, white_list: set[str] | None = None):
+    """
+    Generate a word list for Wordle from the OpenLexicon lexicon.
+    The resulting word list will contain words of the specified length,
+    without proper nouns, unknown grammar words, or weird characters.
+    Accented characters will be replaced with their base characters.
+    The word list will be saved as a tab-separated text file.
+    :param language: Language of the lexicon (Language.FR or Language.EN)
+    :param word_length: Desired length of the words in the word list
+    :param white_list: Optional set of words to always include in the word list
+    """
+
     # Example content of OpenLexicon_FR.tsv:
     """
     ortho	Lexique3__cgram	Lexique3__freqlemfilms2	Lexique3__islem
@@ -66,16 +77,29 @@ def main(language: Language = Language.FR, word_length: int = 5):
     lexicon_df = lexicon_df.drop_duplicates(subset=[HeadersDF.ORTHO], keep='first')
     print(f"Filtered lexicon to {len(lexicon_df)} unique orthography")
 
-    # sort words alphabetically
-    lexicon_df = lexicon_df.sort_values(by=HeadersDF.ORTHO)
+    # extract ORTHO Column as word set
+    words = set(lexicon_df[HeadersDF.ORTHO].tolist())
 
-    # save the resulting word list as txt file
-    output_folder_path.mkdir(parents=True, exist_ok=True)
-    lexicon_df[HeadersDF.ORTHO].to_csv(output_filepath, index=False, header=False, sep="\t", encoding="utf-8")
+    # add white_list words if provided
+    if white_list is not None:
+        white_list = {w.lower() for w in white_list if len(w) == word_length and w.isalpha()}
+        initial_count = len(words)
+        words.update(white_list)
+        print(f"Added {len(words) - initial_count} words from white_list")
+
+    # Sort and save the word list
+    print(f"Final word list contains {len(words)} words")
+    words = list(sorted(words))
+
+    # save the resulting word set as txt file
+    with open(output_filepath, "w", encoding="utf-8") as f:
+        for word in words:
+            f.write(f"{word}\n")
     print(f"Saved word list to {output_filepath}")
 
     tock = pd.Timestamp.now()
     print(f"Loaded lexicon in {tock - tick}")
+
 
 
 if __name__ == "__main__":
@@ -83,6 +107,8 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Generating French word lists...")
     print("=" * 60)
+    main(Language.FR, 3)
+    main(Language.FR, 4)
     main(Language.FR, 5)
     main(Language.FR, 6)
     main(Language.FR, 7)
@@ -93,7 +119,15 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("Generating English word lists...")
     print("=" * 60)
-    main(Language.EN, 5)
+    main(Language.EN, 3)
+    main(Language.EN, 4)
+
+    # For english len 5, load a white list from the file "data/english_words.txt"
+    white_list_path = DATA_FOLDER_PATH / "english_words.txt"
+    with open(white_list_path, "r", encoding="utf-8") as f:
+        white_list = {line.strip().lower() for line in f if line.strip()}
+    main(Language.EN, 5, white_list=white_list)
+
     main(Language.EN, 6)
     main(Language.EN, 7)
     main(Language.EN, 8)

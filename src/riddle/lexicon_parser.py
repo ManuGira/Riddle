@@ -4,9 +4,6 @@ from abc import ABC, abstractmethod
 from typing import ClassVar
 import pandas as pd
 
-class Language(enum.StrEnum):
-    FR = "FR"
-    EN = "EN"
 
 class Grammar(enum.StrEnum):
     """Common grammar categories across French and English lexicons."""
@@ -186,13 +183,13 @@ class LexiconFR(Lexicon):
 
 class LexiconEN(Lexicon):
     class GrammarEN(enum.StrEnum):
-        NONE = ""
         NOUN = "NN"  # Noun
         VERB = "VB"  # Verb
         ADJ = "JJ"   # Adjective
         ADV = "RB"   # Adverb
         MINOR = "minor"  # Minor category
         ENCL = "encl"    # Enclitic, e.g., "'s", "n't"
+        NONE = ""
 
     headers = HeadersTXT(
         ORTHO = "ortho",
@@ -229,15 +226,18 @@ class LexiconEN(Lexicon):
         """Parse pipe-separated grammar string, keeping only the first grammar."""
         if not grammar_str or grammar_str.strip() == "":
             return LexiconEN.GrammarEN.NONE
-        
-        # Keep only the first grammar
-        first_gram = grammar_str.split("|")[0]
+
         try:
-            return LexiconEN.GrammarEN(first_gram)
-        except ValueError:
-            print(f"Warning: Unknown grammar type eng '{first_gram}'")
-            exit(1)
-            return LexiconEN.GrammarEN.NONE
+            grams: list[LexiconEN.GrammarEN] = [LexiconEN.GrammarEN(gram) for gram in grammar_str.split("|")]
+            if len(grams) == 1:
+                return grams[0]
+            for gram in LexiconEN.GrammarEN:
+                if gram in grams:
+                    return gram
+        except ValueError as e:
+            raise ValueError(f"Could not parse grammar string: '{grammar_str}'") from e
+
+        raise ValueError(f"Could not parse grammar string: '{grammar_str}'")
     
     @staticmethod
     def load(filepath):
