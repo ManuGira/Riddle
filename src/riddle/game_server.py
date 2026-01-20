@@ -9,10 +9,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from typing import Sequence
 import jwt
 
 from riddle import STATIC_FOLDER_PATH, RiddleGame, GameState
-from typing import Callable
+from riddle.types import GameFactory
 
 
 # API Models (defined at module level for type checking)
@@ -26,25 +27,27 @@ class GuessResponse(BaseModel):
     game_over: bool
     message: str | None = None
 
-GameFactory = Callable[[str], RiddleGame]
+
 
 class GameServer:
     """Game-agnostic server that works with any RiddleGame implementation."""
     
     def __init__(
         self, 
-        games: list[tuple[str, GameFactory]],
+        game_factor_list: Sequence[GameFactory],
         secret_key: str = "your-secret-key-change-this-in-production"
     ):
         """
         Initialize server with multiple games.
         
         Args:
-            games: List of (slug, factory) tuples where slug is the URL path (e.g., "wordle-en-5")
-                   and factory is a callable that takes a date string and returns a RiddleGame instance
+            game_factor_list: List of GameFactory where .url is the URL path (e.g., "wordle-en-5")
+                   and .create_game_instance is a callable that takes a date string and returns a
+                   RiddleGame instance
             secret_key: JWT signing key (change in production)
         """
-        self.games = {slug: factory for slug, factory in games}
+        self.url_to_factory_map: dict[str, GameFactory] = {game_factory.url: game_factory for game_factory in game_factor_list}
+
         self.secret_key = secret_key
         self.algorithm = "HS256"
         self.app = FastAPI()
@@ -72,11 +75,11 @@ class GameServer:
         
         if cache_key not in self._game_cache:
             # Validate slug
-            if slug not in self.games:
+            if slug not in self.url_to_factory_map:
                 raise ValueError(f"Invalid game slug: {slug}")
             
             # Create new game instance for this slug and date
-            self._game_cache[cache_key] = self.games[slug](date_str)
+            self._game_cache[cache_key] = self.url_to_factory_map[slug].create_game_instance(date_str)
             
             # Prevent memory leak: keep only last 7 days per game
             # Remove old entries for this specific slug
@@ -99,12 +102,13 @@ class GameServer:
     
     def create_token(self, date: str, slug: str, game_state: GameState) -> str:
         """Create JWT token with game state and slug."""
+        expiration_date: int = self.get_midnight_timestamp()
         payload = {
             "date": date,
             "slug": slug,
-            "game_state": game_state.to_dict()
+            "game_state": game_state.to_dict(),
+            "exp": expiration_date
         }
-        payload["exp"] = self.get_midnight_timestamp()
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
     
     def verify_token(self, token: str) -> dict | None:
@@ -116,7 +120,7 @@ class GameServer:
                 return None
             # Validate slug exists
             slug = payload.get("slug")
-            if slug is None or slug not in self.games:
+            if slug is None or slug not in self.url_to_factory_map:
                 return None
             return payload
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
@@ -129,13 +133,13 @@ class GameServer:
         @self.app.get("/")
         async def read_root():
             """List all available games."""
-            games_list = "\n".join([f'<li><a href="/{slug}">{slug}</a></li>' for slug in self.games.keys()])
+            games_list = "\n".join([f'<li><a href="/{slug}">{slug}</a></li>' for slug in self.url_to_factory_map.keys()])
             return HTMLResponse(
                 content=f"<h1>Available Games</h1><ul>{games_list}</ul>"
             )
         
         # Create routes for each game
-        for slug in self.games.keys():
+        for slug in self.url_to_factory_map.keys():
             self._create_game_routes(slug)
     
     def _create_game_routes(self, slug: str):
@@ -284,18 +288,18 @@ class GameServer:
             new_state = game.create_game_state()
             return {
                 "token": self.create_token(today, slug, new_state),
-                "message": f"Game reset for today"
+                "message": "Game reset for today"
             }
     
     def run(self, host: str, port: int):
         """Run the server."""
         import uvicorn
         print("Starting game server...")
-        print(f"Number of games: {len(self.games)}")
+        print(f"Number of games: {len(self.url_to_factory_map)}")
         print(f"Today's date: {self.get_today_date()}")
         print("\nAvailable games:")
         # Create today's games to show secrets
-        for slug in self.games.keys():
+        for slug in self.url_to_factory_map.keys():
             game = self.get_game_for_date(slug, self.get_today_date())
             print(f"  /{slug} - Today's secret (for testing): {game.secret}")
         uvicorn.run(self.app, host=host, port=port)

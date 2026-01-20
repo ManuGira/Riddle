@@ -12,9 +12,11 @@ Endpoints:
 """
 
 from riddle.game_server import GameServer
+from riddle.types import Language
 import sys
 import os
 from wordle import generate_wordle_factory
+
 
 def main():
     # Get secret key from environment variable or command line
@@ -34,22 +36,22 @@ def main():
     
     # Create game factories for wordle games
 
-    slug_factories = []
-    for lang in ["EN", "FR"]:
+    game_factories = []
+    for lang in [Language.EN, Language.FR]:
         for length in [5, 6, 7]:
-            slug_factory = generate_wordle_factory(lang, length, secret_key)
-            slug_factories.append(slug_factory)
+            wordle_factory = generate_wordle_factory(lang, length, secret_key)
+            game_factories.append(wordle_factory)
 
     
     # Create server with multiple games
-    server = GameServer(slug_factories)
+    server = GameServer(game_factories)
     
     print("🎮 Multi-Language Wordle Server Starting...")
     print(f"🔐 Secret key: {'*' * len(secret_key)} (hidden)")
     print("\n📚 Game Configuration:")
     print("\n🌍 Available Games:")
     print("  - http://127.0.0.1:8000/ (lists all games)")
-    for slug, _ in server.games.items():
+    for slug, _ in server.url_to_factory_map.items():
         print(f"  - http://127.0.0.1:8000/{slug}")
     print("\n⚠️  Keep the secret key private - it's used to generate daily words!")
     

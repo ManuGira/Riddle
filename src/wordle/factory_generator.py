@@ -1,7 +1,7 @@
 
 
 from wordle.wordle_game import WordleGame
-from riddle.lexicon_parser import Language
+from riddle.types import Language, GameFactory
 from riddle import DATA_FOLDER_PATH
 from pathlib import Path
 
@@ -9,7 +9,7 @@ def get_wordle_word_list_filepath(language: Language, word_length: int) -> Path:
     words_list_dirpath = DATA_FOLDER_PATH / "words_lists"
     return words_list_dirpath / f"wordle_list_{language}_L{word_length}_base.txt"
 
-def generate_wordle_factory(language: Language, word_length: int, secret_key: str) -> tuple[str, callable]:
+def generate_wordle_factory(language: Language, word_length: int, secret_key: str) -> GameFactory[WordleGame]:
     """
     Generate a Wordle game factory for the given language and word length.
     Args:
@@ -17,7 +17,7 @@ def generate_wordle_factory(language: Language, word_length: int, secret_key: st
         word_length (int): Length of the words.
         secret_key (str): Secret key for the game.
     Returns:
-        tuple[str, callable]: A tuple containing the URL slug and the game factory function.
+        GameFactory: A dataclass containing the URL slug and factory function.
     """
 
     # Configuration for each game
@@ -30,5 +30,5 @@ def generate_wordle_factory(language: Language, word_length: int, secret_key: st
     # Create URL slug for the game. Typically: "wordle-en-5" or "wordle-fr-6"
     wordle_url_slug = f"wordle-{language.lower()}-{word_length}"
 
-    return (wordle_url_slug, wordle_factory)
+    return GameFactory(wordle_url_slug, wordle_factory)
     

@@ -7,8 +7,9 @@ from datetime import datetime, timedelta
 import pytest
 
 from riddle.game_server import GameServer
-from riddle.riddle_game import RiddleGame
-from riddle.game_state import GameState
+from riddle import RiddleGame
+from riddle import GameState
+from riddle.types import GameFactory
 
 
 class MockGameState(GameState):
@@ -42,8 +43,8 @@ class TestGameServer:
             game.create_game_state = Mock(return_value=MockGameState())
             game.check_guess = Mock(return_value=MockGameState(attempts=1))
             return game
-        return factory
-    
+        return GameFactory(url="wordle-test", create_game_instance=factory)
+
     @pytest.fixture
     def mock_game_factory_2(self):
         """Create a second mock game factory for multi-game testing."""
@@ -54,25 +55,25 @@ class TestGameServer:
             game.create_game_state = Mock(return_value=MockGameState())
             game.check_guess = Mock(return_value=MockGameState(attempts=1))
             return game
-        return factory
-    
+        return GameFactory(url="wordle-test-2", create_game_instance=factory)
+
     @pytest.fixture
     def server(self, mock_game_factory):
         """Create GameServer instance with single game."""
-        return GameServer([("wordle-test", mock_game_factory)], secret_key="test-secret-key")
-    
+        return GameServer([mock_game_factory], secret_key="test-secret-key")
+
     @pytest.fixture
     def multi_server(self, mock_game_factory, mock_game_factory_2):
         """Create GameServer instance with multiple games."""
         return GameServer([
-            ("wordle-en", mock_game_factory),
-            ("wordle-fr", mock_game_factory_2)
+            mock_game_factory,
+            mock_game_factory_2
         ], secret_key="test-secret-key")
     
     def test_server_initialization(self, server):
         """Test server initializes correctly."""
-        assert len(server.games) == 1
-        assert "wordle-test" in server.games
+        assert len(server.url_to_factory_map) == 1
+        assert "wordle-test" in server.url_to_factory_map
         assert server.secret_key == "test-secret-key"
         assert server.algorithm == "HS256"
         assert len(server._game_cache) == 0
@@ -98,8 +99,8 @@ class TestGameServer:
     
     def test_multi_game_caching(self, multi_server):
         """Test multiple games can be cached independently."""
-        game1 = multi_server.get_game_for_date("wordle-en", "2026-01-12")
-        game2 = multi_server.get_game_for_date("wordle-fr", "2026-01-12")
+        game1 = multi_server.get_game_for_date("wordle-test", "2026-01-12")
+        game2 = multi_server.get_game_for_date("wordle-test-2", "2026-01-12")
         
         assert game1 is not game2  # Different games for different slugs
         assert game1.secret == "CRANE"

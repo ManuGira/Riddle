@@ -1,6 +1,9 @@
 """Wordle game implementations."""
 
-from riddle.lexicon_parser import Language
+# ignore F401: imported but unused
+# flake8: noqa: F401
+
+from riddle import Language
 from riddle import DATA_FOLDER_PATH
 from pathlib import Path
 

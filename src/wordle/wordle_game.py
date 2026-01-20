@@ -1,5 +1,5 @@
-from riddle import RiddleGame
-from riddle import GameState
+from riddle.types import RiddleGame
+from riddle.types import GameState
 from .wordle_state import WordleState, GuessResult
 import hashlib
 from pathlib import Path
@@ -24,12 +24,16 @@ class WordleGame(RiddleGame):
         
         # Load word list (fresh load each time - allows updates without restart)
         with open(words_file, "r", encoding="utf-8") as f:
-            words = [w.strip().upper() for w in f]
+            self.word_list = [w.strip().upper() for w in f]
 
-        self.word_list = [w for w in words if w.isalpha()]
-        
-        word_length = len(words[0])
-        assert all(len(w) == word_length for w in words), "All words must have the same length"
+        # remove last word if empty  (trailing newline)
+        self.word_list = [w for w in self.word_list if len(w) > 0]
+
+        assert len(self.word_list) == len(set(self.word_list)), "Word list contains duplicate words"
+        assert all(w for w in self.word_list if w.isalpha()) , "All words must be alphabetic"
+
+        word_length = len(self.word_list[0])
+        assert all(len(w) == word_length for w in self.word_list), "All words must have the same length"
 
         print(f"Loaded {len(self.word_list)} words from {words_file} ------------------------------------")
         # Call parent __init__ which calls _generate_challenge
