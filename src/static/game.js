@@ -5,6 +5,8 @@ class WordleGame {
     constructor() {
         // Get base path from injected global variable (defaults to '' for root)
         this.basePath = window.GAME_BASE_PATH || '';
+        // Create unique storage key for each game
+        this.storageKey = this.basePath ? `${this.basePath.replace(/\//g, '_')}_token` : 'wordle_token';
         this.token = this.loadToken();
         this.gameState = null;
         this.gameInfo = null;
@@ -439,7 +441,7 @@ class WordleGame {
     
     // Token management (localStorage)
     loadToken() {
-        const token = localStorage.getItem('wordle_token');
+        const token = localStorage.getItem(this.storageKey);
         
         // Check if token is for today
         if (token) {
@@ -453,11 +455,11 @@ class WordleGame {
                     return token;
                 } else {
                     // Old token, clear it
-                    localStorage.removeItem('wordle_token');
+                    localStorage.removeItem(this.storageKey);
                 }
             } catch (e) {
                 console.error('Error parsing token:', e);
-                localStorage.removeItem('wordle_token');
+                localStorage.removeItem(this.storageKey);
             }
         }
         
@@ -466,9 +468,9 @@ class WordleGame {
     
     saveToken(token) {
         if (token) {
-            localStorage.setItem('wordle_token', token);
+            localStorage.setItem(this.storageKey, token);
         } else {
-            localStorage.removeItem('wordle_token');
+            localStorage.removeItem(this.storageKey);
         }
     }
 }
