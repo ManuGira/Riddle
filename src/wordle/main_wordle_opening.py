@@ -3,6 +3,7 @@ from ortools.linear_solver import pywraplp
 import numpy as np
 import argparse
 import riddle.common as cmn
+from riddle import Language, DATA_FOLDER_PATH
 
 
 def clean_accents(words: list[str]) -> list[str]:
@@ -168,7 +169,7 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
             for letter, words in letter_at_pos.items():
                 if len(words) > 1:
                     position_overlaps.append((pos, letter, words))
-        
+
         print("Optimal words: ", selected_words)
         print(f"Distinct letters: {distinct_letter_count} ({', '.join(sorted(all_letters))})")
         print(f"Total frequency score: {total_frequency:.4f}")
@@ -177,11 +178,12 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
             print("Position overlaps:")
             for pos, letter, words in position_overlaps:
                 print(f"  Position {pos}: '{letter}' in {words}")
+        print(f"| {len(selected_words[0])} | {N} | {', '.join(selected_words)} |")
     else:
         print("No optimal solution found.")
 
 
-def find_best_opening(language: str, length: int, N: int):
+def find_best_opening(language: Language, length: int, N: int):
     """
     Find the best opening words for Wordle-like games.
     :param language: "french" or "english"
@@ -192,10 +194,13 @@ def find_best_opening(language: str, length: int, N: int):
     """
 
     print(f"Loading {language} words of {length} distinct letters...")
-    words = cmn.load_all_words(language)
-    words = clean_accents(words)
-    words = filter_words(words, length)
-    print(f"Number of valid words: {len(words)}")
+
+    # load words from data/words_lists/wordle_list_{language}_L{length}_base.txt
+    words_file = DATA_FOLDER_PATH / "words_lists" / f"wordle_list_{language.lower()}_L{length}_base.txt"
+    with open(words_file, encoding="utf-8") as f:
+        words = [w.strip() for w in f if w.strip()]
+
+    print(f"Number  words: {len(words)}")
 
     # compute frequency map
     frequency_map = cmn.compute_letter_frequency(words)
@@ -215,14 +220,16 @@ def find_best_opening(language: str, length: int, N: int):
     find_best_word_combination(df_words, N, letters, frequency_map)
 
 
+
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(
         description="Find the best opening words for Wordle-like games using letter frequency analysis."
     )
     parser.add_argument(
         "language",
         type=str,
-        choices=["french", "english"],
+        choices=["fr", "en"],
         help="Language to use: french or english"
     )
     parser.add_argument(
@@ -238,7 +245,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    find_best_opening(args.language, args.length, args.N)
+    find_best_opening(Language(args.language.upper), args.length, args.N)
 
     # french, length=6, N=2: amours, client
     # french, length=6, N=3: dragon, mythes, public
