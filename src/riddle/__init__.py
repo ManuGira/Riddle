@@ -6,16 +6,16 @@
 from . import common
 from .common import REPO_ROOT_PATH, DATA_FOLDER_PATH, STATIC_FOLDER_PATH
 
-from . import game_state
-from .game_state import GameState
+from . import types
+from .types import Language, GameState, RiddleGame, GameFactory
 
-from . import riddle_game
-from .riddle_game import RiddleGame
-
-from . import game_server
-from .game_server import GameServer
+from . import game_server  # allow "import riddle.game_server"
+from .game_server import GameServer  # allow "from riddle.game_server import GameServer"
 
 from . import similarity_matrix_codec
+
+from . import lexicon_parser
+from .lexicon_parser import LexiconFR, LexiconEN, Grammar
 
 # Deactivate `from riddle import *` behavior
 __all__ = []

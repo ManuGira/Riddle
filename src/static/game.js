@@ -3,6 +3,10 @@
 
 class WordleGame {
     constructor() {
+        // Get base path from injected global variable (defaults to '' for root)
+        this.basePath = window.GAME_BASE_PATH || '';
+        // Create unique storage key for each game
+        this.storageKey = this.basePath ? `${this.basePath.replace(/\//g, '_')}_token` : 'wordle_token';
         this.token = this.loadToken();
         this.gameState = null;
         this.gameInfo = null;
@@ -32,12 +36,29 @@ class WordleGame {
         this.init();
     }
     
+    getApiUrl(endpoint) {
+        // Construct full API URL using base path
+        return `${this.basePath}${endpoint}`;
+    }
+    
     async init() {
+        // Detect mobile device and set input readonly accordingly
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile) {
+            // On desktop, allow typing in input field
+            this.input.removeAttribute('readonly');
+        }
+        
         // Setup event listeners
         this.setupEventListeners();
         
         // Load game info
         await this.loadGameInfo();
+        
+        // Set input maxlength based on word length
+        if (this.gameInfo?.word_length) {
+            this.input.setAttribute('maxlength', this.gameInfo.word_length);
+        }
         
         // Initialize board
         this.createBoard();
@@ -67,9 +88,10 @@ class WordleGame {
             }
         });
         
-        // Auto-uppercase
+        // Update tiles as user types
         this.input.addEventListener('input', (e) => {
             e.target.value = e.target.value.toUpperCase();
+            this.updateCurrentRowTiles(e.target.value);
         });
         
         // Reset button
@@ -111,7 +133,7 @@ class WordleGame {
     
     async loadGameInfo() {
         try {
-            const response = await fetch('/api/info');
+            const response = await fetch(this.getApiUrl('/api/info'));
             this.gameInfo = await response.json();
             this.dateDisplay.textContent = `📅 ${this.gameInfo.date}`;
         } catch (error) {
@@ -124,6 +146,19 @@ class WordleGame {
         this.board.innerHTML = '';
         const maxAttempts = this.gameInfo?.max_attempts || 6;
         const wordLength = this.gameInfo?.word_length || 5;
+        
+        // Adjust tile size for longer words
+        const root = document.documentElement;
+        if (wordLength > 7) {
+            root.style.setProperty('--tile-size', '50px');
+            root.style.setProperty('--gap', '4px');
+        } else if (wordLength > 5) {
+            root.style.setProperty('--tile-size', '56px');
+            root.style.setProperty('--gap', '4px');
+        } else {
+            root.style.setProperty('--tile-size', '62px');
+            root.style.setProperty('--gap', '5px');
+        }
         
         for (let i = 0; i < maxAttempts; i++) {
             const row = document.createElement('div');
@@ -174,27 +209,54 @@ class WordleGame {
     handleKeyClick(key) {
         if (this.gameState?.game_over) return;
         
+        const wordLength = this.gameInfo?.word_length || 5;
+        
         if (key === 'ENTER') {
             this.submitGuess();
         } else if (key === '⌫') {
             this.input.value = this.input.value.slice(0, -1);
+            this.updateCurrentRowTiles(this.input.value);
         } else {
-            if (this.input.value.length < 5) {
+            if (this.input.value.length < wordLength) {
                 this.input.value += key;
+                this.updateCurrentRowTiles(this.input.value);
             }
         }
         
         this.input.focus();
     }
     
+    updateCurrentRowTiles(text) {
+        // Get current row from game state, or default to 0 for new games
+        const currentRow = this.gameState?.attempts || 0;
+        const row = this.board.querySelector(`[data-row="${currentRow}"]`);
+        if (!row) return;
+        
+        const tiles = row.querySelectorAll('.tile');
+        const wordLength = this.gameInfo?.word_length || 5;
+        
+        // Clear all tiles first
+        tiles.forEach(tile => {
+            tile.textContent = '';
+            tile.classList.remove('filled');
+        });
+        
+        // Fill tiles with current text
+        for (let i = 0; i < Math.min(text.length, wordLength); i++) {
+            tiles[i].textContent = text[i];
+            tiles[i].classList.add('filled');
+        }
+    }
+    
     async submitGuess() {
         if (this.isSubmitting) return;
         
         const guess = this.input.value.trim().toUpperCase();
+        const wordLength = this.gameInfo?.word_length || 5;
         
         // Validation
-        if (guess.length !== 5) {
-            this.showMessage('⚠️ Word must be 5 letters!', 'warning');
+        if (guess.length !== wordLength) {
+            this.showMessage(`⚠️ Word must be ${wordLength} letters!`, 'warning');
             this.shakeInput();
             return;
         }
@@ -209,7 +271,7 @@ class WordleGame {
         this.submitButton.disabled = true;
         
         try {
-            const response = await fetch('/api/guess', {
+            const response = await fetch(this.getApiUrl('/api/guess'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -266,7 +328,7 @@ class WordleGame {
         // Send empty guess to validate token and restore state
         // This doesn't consume an attempt
         try {
-            const response = await fetch('/api/guess', {
+            const response = await fetch(this.getApiUrl('/api/guess'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -313,7 +375,7 @@ class WordleGame {
         }
         
         try {
-            const response = await fetch('/api/reset', {
+            const response = await fetch(this.getApiUrl('/api/reset'), {
                 method: 'POST',
             });
             
@@ -425,7 +487,7 @@ class WordleGame {
     
     // Token management (localStorage)
     loadToken() {
-        const token = localStorage.getItem('wordle_token');
+        const token = localStorage.getItem(this.storageKey);
         
         // Check if token is for today
         if (token) {
@@ -439,11 +501,11 @@ class WordleGame {
                     return token;
                 } else {
                     // Old token, clear it
-                    localStorage.removeItem('wordle_token');
+                    localStorage.removeItem(this.storageKey);
                 }
             } catch (e) {
                 console.error('Error parsing token:', e);
-                localStorage.removeItem('wordle_token');
+                localStorage.removeItem(this.storageKey);
             }
         }
         
@@ -452,9 +514,9 @@ class WordleGame {
     
     saveToken(token) {
         if (token) {
-            localStorage.setItem('wordle_token', token);
+            localStorage.setItem(this.storageKey, token);
         } else {
-            localStorage.removeItem('wordle_token');
+            localStorage.removeItem(this.storageKey);
         }
     }
 }

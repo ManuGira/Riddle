@@ -1,4 +1,4 @@
-from riddle.game_state import GameState
+from riddle import GameState
 from typing import Any
 from dataclasses import dataclass, field
 

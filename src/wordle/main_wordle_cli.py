@@ -4,11 +4,14 @@ Play Wordle directly in your terminal.
 """
 
 import dataclasses
+
+from wordle import generate_wordle_factory
 from wordle.wordle_game import WordleGame
 from wordle.wordle_state import WordleState
 from datetime import datetime
 import sys
-from riddle import DATA_FOLDER_PATH
+from riddle import GameFactory, Language
+
 
 @dataclasses.dataclass
 class Colors:
@@ -171,18 +174,20 @@ def main():
         secret_key = sys.argv[1]
     
     # Configuration
-    words_file = DATA_FOLDER_PATH / "english_words.txt"
     today = datetime.now().strftime("%Y-%m-%d")
-    
+
+    # Create game factory that captures configuration
+    wordle_game_factory: GameFactory[WordleGame] = generate_wordle_factory(Language.EN, 5, secret_key)
+
     # Create game for today
     print("\n🔄 Loading game...")
-    game = WordleGame(today, words_file, secret_key)
-    
+    wordle_game: WordleGame = wordle_game_factory.create_game_instance(today)
+
     print("✅ Game loaded!")
-    print(f"📊 Word pool size: {len(game.word_list)}")
+    print(f"📊 Word pool size: {len(wordle_game.word_list)}")
     
     # Create and run CLI
-    cli = WordleCLI(game)
+    cli = WordleCLI(wordle_game)
     cli.play()
 
 

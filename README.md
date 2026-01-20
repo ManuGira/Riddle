@@ -20,21 +20,161 @@ This installs the `riddle` module, making it available to all scripts in the pro
 
 ### French
 
-| Word Length | Number of Words | Opening Words              |
-|-------------|-----------------|----------------------------|
-| 4 | 4               | deca, flop, murs, vint     |
-| 4 | 5               | bang, dupe, fric, thym, vols |
-| 5 | 3               | abces, lundi, rompt        |
-| 5 | 4               | clamp, hebdo, jurys, vingt |
-| 6 | 2               | amours, client             |
-| 6 | 3               | dragon, mythes, public     |
+<table>
+<thead>
+<tr>
+<th>Word Length</th>
+<th>Number of Words</th>
+<th>Opening Words</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background-color: #FFFFFF;">
+<td>3</td>
+<td>5</td>
+<td>but - foc - lap - mir - nes</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>4</td>
+<td>4</td>
+<td>buts - fiel - marc - pond</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>4</td>
+<td>5</td>
+<td>bang - dupe - fric - thym - vols</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>4</td>
+<td>5</td>
+<td>bock, gent, hard, plum, vifs</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>5</td>
+<td>3</td>
+<td>abces - lundi - rompt</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>5</td>
+<td>4</td>
+<td>clamp - hebdo - jurys - vingt</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>6</td>
+<td>2</td>
+<td>craint - moules</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>6</td>
+<td>3</td>
+<td>dragon - mythes - public</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>6</td>
+<td>4</td>
+<td>bijoux - champs - devint - frugal</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>7</td>
+<td>2</td>
+<td>inculpe - motards</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>7</td>
+<td>3</td>
+<td>chomage - devants - publier</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>7</td>
+<td>4</td>
+<td>abdomen - facheux - piquant - verglas</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>8</td>
+<td>2</td>
+<td>chanteur - diplomes</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>8</td>
+<td>3</td>
+<td>bucheron - domptage - festival</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>9</td>
+<td>2</td>
+<td>degauchir - longtemps</td>
+</tr>
+</tbody>
+</table>
 
 ### English
 
-| Word Length | Number of Words | Opening Words |
-|-------------|-----------------|---------------|
-| 5 | 3 | duchy, slain, trope |
-| 5 | 4 | blank, crest, dough, wimpy |
+<table>
+<thead>
+<tr>
+<th>Word Length</th>
+<th>Number of Words</th>
+<th>Opening Words</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background-color: #FFFFFF;">
+<td>3</td>
+<td>4</td>
+<td>bet - dig - oar - pun</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>3</td>
+<td>5</td>
+<td>bed - out - ran - spy - wig</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>4</td>
+<td>3</td>
+<td>dare - punt - soil</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>4</td>
+<td>4</td>
+<td>ache - born - dump - silt</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>4</td>
+<td>5</td>
+<td>bums, fern, gold, pack, with</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>5</td>
+<td>3</td>
+<td>duchy - slain - trope</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>5</td>
+<td>4</td>
+<td>blank - crest - dough - wimpy</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>6</td>
+<td>3</td>
+<td>cymbal - gopher - nudist</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>7</td>
+<td>2</td>
+<td>closeup - trading</td>
+</tr>
+<tr style="background-color: #F5F5F5;">
+<td>8</td>
+<td>2</td>
+<td>chapters - moulding</td>
+</tr>
+<tr style="background-color: #FFFFFF;">
+<td>9</td>
+<td>2</td>
+<td>combating - upholders</td>
+</tr>
+</tbody>
+</table>
 
 ## Usage
 

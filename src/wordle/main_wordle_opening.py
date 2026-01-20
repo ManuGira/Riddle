@@ -3,6 +3,7 @@ from ortools.linear_solver import pywraplp
 import numpy as np
 import argparse
 import riddle.common as cmn
+from riddle import Language, DATA_FOLDER_PATH
 
 
 def clean_accents(words: list[str]) -> list[str]:
@@ -69,7 +70,7 @@ def find_best_word_combination_brute_force(df_words: pd.DataFrame, N: int, metri
 
 
 
-def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]):
+def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str], frequency_map: dict[str, float]):
 
     # =========================
     # 3. ILP avec OR-Tools
@@ -78,26 +79,57 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
     assert solver is not None
 
     x = {i: solver.BoolVar(f"x_{i}") for i in df_words.index}
+    
+    # For each letter, create a binary variable indicating if it's used at least once
+    y = {letter: solver.BoolVar(f"y_{letter}") for letter in letters}
 
     # Constraints: N words
     solver.Add(sum(x[i] for i in x) == N)
 
-    # Constraints: distinct letters
+    # For each letter, y[letter] = 1 if at least one selected word contains that letter
     for letter in letters:
-        solver.Add(
-            sum(
-                x[i]
-                for i, word_letters in df_words["letters"].items()
-                if letter in word_letters
-            ) <= 1
-        )
+        words_with_letter = [
+            i for i, word_letters in df_words["letters"].items()
+            if letter in word_letters
+        ]
+        if words_with_letter:
+            # If any word containing this letter is selected, y[letter] can be 1
+            solver.Add(y[letter] <= sum(x[i] for i in words_with_letter))
+            # Force y[letter] to be 1 if any word with this letter is selected
+            for i in words_with_letter:
+                solver.Add(y[letter] >= x[i])
 
-    # objective, maximize total entropy
-    # solver.Maximize(
-    #     sum(df_words.loc[i, "entropy"] * x[i] for i in x)
-    # )
+    # Create binary variables for each (letter, position) pair to track unique positions
+    # z[letter][pos] = 1 if letter appears at position pos in exactly one selected word
+    max_word_length = df_words["word"].str.len().max()
+    z = {}
+    for letter in letters:
+        z[letter] = {}
+        for pos in range(max_word_length):
+            z[letter][pos] = solver.BoolVar(f"z_{letter}_{pos}")
+            
+            # Find words that have this letter at this position
+            words_with_letter_at_pos = [
+                i for i, word in df_words["word"].items()
+                if len(word) > pos and word[pos] == letter
+            ]
+            
+            if words_with_letter_at_pos:
+                # Ensure at most one word with this letter at this position is selected
+                solver.Add(sum(x[i] for i in words_with_letter_at_pos) <= 1)
+                # z[letter][pos] = 1 if and only if exactly one matching word is selected
+                # Since we already constrain sum <= 1, we can use equality
+                solver.Add(z[letter][pos] == sum(x[i] for i in words_with_letter_at_pos))
+            else:
+                # No words have this letter at this position, z must be 0
+                solver.Add(z[letter][pos] == 0)
+
+    # Objective: maximize the sum of frequencies of distinct letters used
+    # Plus a small bonus (1/1000) for each unique (letter, position) pair
+    position_bonus = 0.001
     solver.Maximize(
-        sum(df_words.loc[i, "frequency"] * x[i] for i in x)
+        sum(frequency_map[letter] * y[letter] for letter in letters) +
+        position_bonus * sum(z[letter][pos] for letter in letters for pos in range(max_word_length))
     )
 
     status = solver.Solve()
@@ -110,13 +142,48 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
         solution = df_words.loc[
             [i for i in x if x[i].solution_value() == 1]
         ]
-        print("Optimal words: ", list(solution["word"]))
-        print("Total score :", solution["entropy"].sum())
+        selected_words = list(solution["word"])
+        all_letters = set()
+        for word in selected_words:
+            all_letters.update(word)
+        distinct_letter_count = len(all_letters)
+        total_frequency = sum(frequency_map[letter] for letter in all_letters)
+        
+        # Calculate unique position count
+        unique_position_count = sum(
+            z[letter][pos].solution_value() 
+            for letter in letters 
+            for pos in range(max_word_length)
+        )
+        
+        # Find position overlaps for reporting
+        position_overlaps = []
+        for pos in range(max_word_length):
+            letter_at_pos = {}
+            for word in selected_words:
+                if pos < len(word):
+                    letter = word[pos]
+                    if letter not in letter_at_pos:
+                        letter_at_pos[letter] = []
+                    letter_at_pos[letter].append(word)
+            for letter, words in letter_at_pos.items():
+                if len(words) > 1:
+                    position_overlaps.append((pos, letter, words))
+
+        print("Optimal words: ", selected_words)
+        print(f"Distinct letters: {distinct_letter_count} ({', '.join(sorted(all_letters))})")
+        print(f"Total frequency score: {total_frequency:.4f}")
+        print(f"Unique letter positions: {int(unique_position_count)}")
+        if position_overlaps:
+            print("Position overlaps:")
+            for pos, letter, words in position_overlaps:
+                print(f"  Position {pos}: '{letter}' in {words}")
+        print(f"| {len(selected_words[0])} | {N} | {', '.join(selected_words)} |")
     else:
         print("No optimal solution found.")
 
 
-def find_best_opening(language: str, length: int, N: int):
+def find_best_opening(language: Language, length: int, N: int):
     """
     Find the best opening words for Wordle-like games.
     :param language: "french" or "english"
@@ -127,10 +194,13 @@ def find_best_opening(language: str, length: int, N: int):
     """
 
     print(f"Loading {language} words of {length} distinct letters...")
-    words = cmn.load_all_words(language)
-    words = clean_accents(words)
-    words = filter_words(words, length)
-    print(f"Number of valid words: {len(words)}")
+
+    # load words from data/words_lists/wordle_list_{language}_L{length}_base.txt
+    words_file = DATA_FOLDER_PATH / "words_lists" / f"wordle_list_{language.lower()}_L{length}_base.txt"
+    with open(words_file, encoding="utf-8") as f:
+        words = [w.strip() for w in f if w.strip()]
+
+    print(f"Number  words: {len(words)}")
 
     # compute frequency map
     frequency_map = cmn.compute_letter_frequency(words)
@@ -147,17 +217,19 @@ def find_best_opening(language: str, length: int, N: int):
 
     # find_best_word_combination_brute_force(df_words, N, metric="frequency")
     # find_best_word_combination_brute_force(df_words, N, metric="entropy")
-    find_best_word_combination(df_words, N, letters)
+    find_best_word_combination(df_words, N, letters, frequency_map)
+
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(
         description="Find the best opening words for Wordle-like games using letter frequency analysis."
     )
     parser.add_argument(
         "language",
         type=str,
-        choices=["french", "english"],
+        choices=["fr", "en"],
         help="Language to use: french or english"
     )
     parser.add_argument(
@@ -173,7 +245,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    find_best_opening(args.language, args.length, args.N)
+    find_best_opening(Language(args.language.upper), args.length, args.N)
 
     # french, length=6, N=2: amours, client
     # french, length=6, N=3: dragon, mythes, public
