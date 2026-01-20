@@ -88,9 +88,10 @@ class WordleGame {
             }
         });
         
-        // Auto-uppercase
+        // Update tiles as user types
         this.input.addEventListener('input', (e) => {
             e.target.value = e.target.value.toUpperCase();
+            this.updateCurrentRowTiles(e.target.value);
         });
         
         // Reset button
@@ -208,17 +209,43 @@ class WordleGame {
     handleKeyClick(key) {
         if (this.gameState?.game_over) return;
         
+        const wordLength = this.gameInfo?.word_length || 5;
+        
         if (key === 'ENTER') {
             this.submitGuess();
         } else if (key === '⌫') {
             this.input.value = this.input.value.slice(0, -1);
+            this.updateCurrentRowTiles(this.input.value);
         } else {
-            if (this.input.value.length < 5) {
+            if (this.input.value.length < wordLength) {
                 this.input.value += key;
+                this.updateCurrentRowTiles(this.input.value);
             }
         }
         
         this.input.focus();
+    }
+    
+    updateCurrentRowTiles(text) {
+        // Get current row from game state, or default to 0 for new games
+        const currentRow = this.gameState?.attempts || 0;
+        const row = this.board.querySelector(`[data-row="${currentRow}"]`);
+        if (!row) return;
+        
+        const tiles = row.querySelectorAll('.tile');
+        const wordLength = this.gameInfo?.word_length || 5;
+        
+        // Clear all tiles first
+        tiles.forEach(tile => {
+            tile.textContent = '';
+            tile.classList.remove('filled');
+        });
+        
+        // Fill tiles with current text
+        for (let i = 0; i < Math.min(text.length, wordLength); i++) {
+            tiles[i].textContent = text[i];
+            tiles[i].classList.add('filled');
+        }
     }
     
     async submitGuess() {
