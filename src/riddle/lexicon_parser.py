@@ -17,6 +17,7 @@ class Grammar(enum.StrEnum):
     CONJUNCTION = "CONJUNCTION"
     AUXILIARY = "AUXILIARY"
     OTHER = "OTHER"
+    OTHER_BUT_COOL_THOUGH = "OTHER_BUT_COOL_THOUGH"
     UNKNOWN = "UNKNOWN"
 
 @dataclasses.dataclass
@@ -216,7 +217,7 @@ class LexiconEN(Lexicon):
             LexiconEN.GrammarEN.VERB: Grammar.VERB,
             LexiconEN.GrammarEN.ADJ: Grammar.ADJECTIVE,
             LexiconEN.GrammarEN.ADV: Grammar.ADVERB,
-            LexiconEN.GrammarEN.MINOR: Grammar.OTHER,
+            LexiconEN.GrammarEN.MINOR: Grammar.OTHER_BUT_COOL_THOUGH,
             LexiconEN.GrammarEN.ENCL: Grammar.OTHER,
             LexiconEN.GrammarEN.NONE: Grammar.UNKNOWN,
         }

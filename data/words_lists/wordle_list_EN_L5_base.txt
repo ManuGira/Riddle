@@ -3073,6 +3073,7 @@ theta
 thick
 thief
 thigh
+thine
 thing
 think
 third
@@ -3487,6 +3488,7 @@ yield
 yodel
 yokel
 young
+yours
 youth
 yucca
 zebra

@@ -153,6 +153,7 @@ allowable
 allowance
 allusions
 aloneness
+alongside
 aloofness
 altercate
 alternate
@@ -2274,6 +2275,7 @@ housemaid
 housetops
 housewife
 housework
+howsoever
 humanists
 humankind
 humanness
@@ -5054,6 +5056,7 @@ westerner
 westwards
 whalebone
 wheelbase
+wherefore
 whereupon
 wherewith
 whetstone
@@ -5075,6 +5078,7 @@ wholemeal
 wholeness
 wholesale
 wholesome
+whosoever
 widowhood
 willingly
 willpower

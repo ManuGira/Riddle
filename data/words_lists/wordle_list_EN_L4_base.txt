@@ -25,6 +25,7 @@ airs
 airy
 ajar
 akin
+alas
 alga
 ally
 alms
@@ -32,6 +33,7 @@ aloe
 also
 alto
 alum
+amid
 ammo
 amok
 anal
@@ -54,6 +56,7 @@ arty
 ashy
 asks
 atom
+atop
 aunt
 aura
 auto
@@ -173,6 +176,7 @@ boot
 bore
 born
 boss
+both
 bout
 bowl
 bows
@@ -416,6 +420,7 @@ doze
 drab
 drag
 dram
+drat
 draw
 drew
 drip
@@ -442,6 +447,7 @@ dusk
 dust
 duty
 dyed
+each
 earl
 earn
 ears
@@ -573,6 +579,7 @@ fray
 free
 fret
 frog
+from
 fuel
 full
 fume
@@ -648,6 +655,7 @@ goof
 goon
 gore
 gory
+gosh
 gout
 gown
 grab
@@ -721,6 +729,7 @@ herb
 herd
 here
 hero
+hers
 hick
 hide
 high
@@ -790,6 +799,7 @@ info
 inks
 inky
 inns
+into
 ions
 iota
 iris
@@ -900,6 +910,7 @@ lend
 lens
 lent
 less
+lest
 lets
 levy
 lewd
@@ -1131,8 +1142,10 @@ omit
 once
 ones
 only
+onto
 onus
 onyx
+oops
 ooze
 oozy
 opal
@@ -1142,6 +1155,7 @@ oral
 ores
 orgy
 ouch
+ours
 oust
 outs
 oval
@@ -1206,6 +1220,7 @@ peso
 pest
 pets
 pews
+phew
 pica
 pick
 pied
@@ -1237,6 +1252,7 @@ plow
 ploy
 plug
 plum
+plus
 pock
 pods
 poem
@@ -1643,12 +1659,16 @@ tent
 term
 test
 text
+than
 that
 thaw
 thee
+them
 then
+they
 thin
 this
+thou
 thru
 thud
 thug
@@ -1729,6 +1749,7 @@ ugly
 ulna
 undo
 unit
+unto
 upon
 urea
 urge
@@ -1811,6 +1832,8 @@ wept
 were
 west
 wham
+what
+when
 whet
 whey
 whig
@@ -1819,6 +1842,7 @@ whip
 whir
 whiz
 whoa
+whom
 wick
 wide
 wife
@@ -1873,6 +1897,7 @@ yoga
 yoke
 yolk
 yore
+your
 yowl
 zany
 zeal

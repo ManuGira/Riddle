@@ -5667,8 +5667,11 @@ werewolf
 westerly
 westward
 wetlands
+whatever
 wheeling
 wheezing
+whenever
+wherever
 whinnied
 whiplash
 whipping
@@ -5682,6 +5685,7 @@ whitecap
 whitened
 whizzing
 whodunit
+whomever
 whooping
 whoppers
 whopping

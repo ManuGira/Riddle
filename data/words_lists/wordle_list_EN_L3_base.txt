@@ -13,6 +13,7 @@ air
 ale
 all
 amp
+and
 ant
 any
 ape
@@ -63,7 +64,9 @@ bug
 bum
 bun
 bus
+but
 buy
+bye
 cab
 cad
 cam
@@ -147,6 +150,7 @@ flu
 fly
 foe
 fog
+for
 fox
 fry
 fun
@@ -181,19 +185,24 @@ haw
 hay
 hem
 hen
+her
 hew
 hex
 hey
 hid
+him
 hip
+his
 hit
 hoe
 hog
 hop
 hot
+how
 hub
 hue
 hug
+huh
 hum
 hut
 ice
@@ -206,6 +215,7 @@ inn
 ion
 ire
 irk
+its
 ivy
 jab
 jag
@@ -299,6 +309,7 @@ old
 one
 orb
 ore
+our
 out
 ova
 owe
@@ -383,6 +394,7 @@ sen
 set
 sew
 sex
+she
 shy
 sic
 sin
@@ -418,6 +430,7 @@ tax
 tea
 tee
 ten
+the
 thy
 tic
 tie
@@ -445,6 +458,7 @@ vat
 veg
 vet
 vex
+via
 vie
 vow
 wad
@@ -457,6 +471,8 @@ web
 wed
 wee
 wet
+who
+why
 wig
 win
 wit
@@ -475,6 +491,7 @@ yet
 yin
 yip
 yon
+you
 zap
 zip
 zoo

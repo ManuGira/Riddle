@@ -85,6 +85,7 @@ affixed
 afflict
 affords
 affront
+against
 ageless
 agilely
 agility
@@ -147,6 +148,7 @@ amiable
 ammonia
 amnesia
 amnesty
+amongst
 amorist
 amorous
 amounts
@@ -271,6 +273,7 @@ assumes
 assured
 assures
 astound
+astride
 asunder
 atheism
 atheist
@@ -395,6 +398,7 @@ bearish
 beastly
 beating
 beatnik
+because
 beckons
 becomes
 bedbugs
@@ -437,6 +441,7 @@ bemoans
 benched
 benches
 bending
+beneath
 benefit
 benzene
 bequest
@@ -445,6 +450,7 @@ bereave
 berries
 berserk
 beseech
+besides
 besiege
 besmear
 bestial
@@ -1179,6 +1185,7 @@ courses
 courted
 courtly
 cousins
+couture
 covered
 coveted
 cowbell
@@ -1444,6 +1451,7 @@ desired
 desires
 despair
 despise
+despite
 despoil
 despots
 dessert
@@ -2256,6 +2264,7 @@ goggles
 golfers
 golfing
 gondola
+goodbye
 goodies
 gorging
 gorilla
@@ -2266,6 +2275,7 @@ goulash
 gourmet
 governs
 grabbed
+gracias
 grading
 gradual
 grammar
@@ -2470,6 +2480,7 @@ heroics
 heroine
 heroism
 herring
+herself
 hexagon
 hibachi
 hiccups
@@ -2478,6 +2489,7 @@ hideous
 hideout
 highest
 highway
+himself
 hinders
 hinting
 hipline
@@ -2722,6 +2734,7 @@ javelin
 jawbone
 jaywalk
 jealous
+jeepers
 jellies
 jerking
 jesting
@@ -3394,6 +3407,7 @@ omitted
 omnibus
 oneness
 onerous
+oneself
 onetime
 ongoing
 onshore
@@ -4376,6 +4390,7 @@ sampled
 sampler
 samples
 samurai
+sanctum
 sandals
 sandbag
 sandbar
@@ -5316,6 +5331,7 @@ tourism
 tourist
 tourney
 tousled
+towards
 towline
 towpath
 towrope
@@ -5712,9 +5728,14 @@ whatnot
 wheeled
 wheezed
 wheezes
+whereas
+whereat
+whereby
 wherein
 whereof
 whereon
+whereto
+whether
 whetted
 whimper
 whimsey
@@ -5729,9 +5750,11 @@ whisper
 whistle
 whitely
 whitens
+whither
 whiting
 whittle
 whizzed
+whoever
 whoopee
 whopper
 wickets

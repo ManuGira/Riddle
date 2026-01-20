@@ -27,6 +27,7 @@ aching
 acidic
 acorns
 acquit
+across
 acting
 action
 active
@@ -80,6 +81,7 @@ airily
 airmen
 airway
 alarms
+albeit
 albino
 albums
 alcove
@@ -103,6 +105,7 @@ always
 amazed
 ambled
 ambush
+amidst
 amoeba
 amoral
 amount
@@ -318,6 +321,7 @@ befoul
 beggar
 begged
 begins
+begone
 behalf
 behave
 behead
@@ -338,6 +342,7 @@ benign
 berate
 bereft
 besets
+beside
 bested
 bestow
 betide
@@ -387,6 +392,7 @@ bleeds
 bleeps
 blends
 blight
+blimey
 blinds
 blithe
 blocks
@@ -937,8 +943,10 @@ creeps
 creepy
 crests
 cretin
+crikey
 crimes
 cringe
+cripes
 crises
 crisis
 crispy
@@ -1917,6 +1925,7 @@ hectic
 hedged
 hedges
 heeded
+heehaw
 hefted
 heifer
 height
@@ -2025,6 +2034,7 @@ hurdle
 hurled
 hurler
 hurrah
+hurray
 hurtle
 hushed
 hustle
@@ -2164,6 +2174,7 @@ jiggle
 jiggly
 jigsaw
 jilted
+jiminy
 jingle
 jiving
 jockey
@@ -2211,6 +2222,7 @@ kidnap
 kidney
 killed
 killer
+kimono
 kinder
 kindle
 kindly
@@ -2978,6 +2990,7 @@ phoned
 phones
 phoney
 phonic
+phooey
 photon
 photos
 phrase
@@ -3689,6 +3702,7 @@ shaggy
 shaken
 shaker
 shakes
+shalom
 shaman
 shamed
 shames
@@ -4250,6 +4264,7 @@ tether
 thanks
 thatch
 thawed
+theirs
 theism
 theist
 themes
@@ -4359,6 +4374,7 @@ toughs
 toupee
 toured
 tousle
+toward
 towels
 towers
 toying
@@ -4480,6 +4496,8 @@ unison
 united
 unjust
 unkind
+unless
+unlike
 unload
 unlock
 unmade
@@ -4582,6 +4600,7 @@ verity
 vermin
 versed
 verses
+versus
 vertex
 vessel
 vestal
@@ -4696,6 +4715,7 @@ whaler
 wheels
 wheeze
 wheezy
+whence
 whilst
 whimsy
 whined
@@ -4742,6 +4762,7 @@ wisely
 wisest
 wished
 wishes
+withal
 wither
 within
 wizard
