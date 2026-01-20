@@ -3,6 +3,7 @@ from wordle.wordle_game import WordleGame
 import sys
 import os
 from riddle import DATA_FOLDER_PATH
+from wordle.word_list_generator import get_wordle_word_list_filepath
 
 
 def main():

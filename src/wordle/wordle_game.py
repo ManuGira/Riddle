@@ -24,10 +24,14 @@ class WordleGame(RiddleGame):
         
         # Load word list (fresh load each time - allows updates without restart)
         with open(words_file, "r", encoding="utf-8") as f:
-            words = [w.strip().upper() for w in f if len(w.strip()) == 5]
-        self.word_list = [w for w in words if w.isalpha()]
+            words = [w.strip().upper() for w in f]
 
+        self.word_list = [w for w in words if w.isalpha()]
         
+        word_length = len(words[0])
+        assert all(len(w) == word_length for w in words), "All words must have the same length"
+
+        print(f"Loaded {len(self.word_list)} words from {words_file} ------------------------------------")
         # Call parent __init__ which calls _generate_challenge
         super().__init__(date_str)
     

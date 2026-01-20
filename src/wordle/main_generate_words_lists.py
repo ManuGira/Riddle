@@ -2,6 +2,8 @@
 from riddle import DATA_FOLDER_PATH
 from riddle.lexicon_parser import LexiconFR, LexiconEN, Language, HeadersDF, Grammar
 import pandas as pd
+from wordle import get_wordle_word_list_filepath, get_lexicon_path
+from pathlib import Path
 
 
 def main(language: Language = Language.FR, word_length: int = 5):
@@ -20,10 +22,9 @@ def main(language: Language = Language.FR, word_length: int = 5):
     abaissaient	VER	4.93	0
     """
 
-    lexicon_path = DATA_FOLDER_PATH / f"OpenLexicon_{language}.tsv"
-    output_folder_path = DATA_FOLDER_PATH / "words_lists"
-    output_folder_path.mkdir(parents=True, exist_ok=True)
-    output_filepath = output_folder_path / f"wordle_list_{language}_L{word_length}_base.txt"
+    lexicon_path: Path = get_lexicon_path(language)
+    output_filepath: Path = get_wordle_word_list_filepath(language, word_length)
+    output_filepath.parent.mkdir(parents=True, exist_ok=True)
     
     # Select the appropriate lexicon class
     LexiconClass = LexiconFR if language == Language.FR else LexiconEN

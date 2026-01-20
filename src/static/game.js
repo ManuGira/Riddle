@@ -55,6 +55,11 @@ class WordleGame {
         // Load game info
         await this.loadGameInfo();
         
+        // Set input maxlength based on word length
+        if (this.gameInfo?.word_length) {
+            this.input.setAttribute('maxlength', this.gameInfo.word_length);
+        }
+        
         // Initialize board
         this.createBoard();
         
@@ -141,6 +146,19 @@ class WordleGame {
         const maxAttempts = this.gameInfo?.max_attempts || 6;
         const wordLength = this.gameInfo?.word_length || 5;
         
+        // Adjust tile size for longer words
+        const root = document.documentElement;
+        if (wordLength > 7) {
+            root.style.setProperty('--tile-size', '50px');
+            root.style.setProperty('--gap', '4px');
+        } else if (wordLength > 5) {
+            root.style.setProperty('--tile-size', '56px');
+            root.style.setProperty('--gap', '4px');
+        } else {
+            root.style.setProperty('--tile-size', '62px');
+            root.style.setProperty('--gap', '5px');
+        }
+        
         for (let i = 0; i < maxAttempts; i++) {
             const row = document.createElement('div');
             row.className = 'board-row';
@@ -207,10 +225,11 @@ class WordleGame {
         if (this.isSubmitting) return;
         
         const guess = this.input.value.trim().toUpperCase();
+        const wordLength = this.gameInfo?.word_length || 5;
         
         // Validation
-        if (guess.length !== 5) {
-            this.showMessage('⚠️ Word must be 5 letters!', 'warning');
+        if (guess.length !== wordLength) {
+            this.showMessage(`⚠️ Word must be ${wordLength} letters!`, 'warning');
             this.shakeInput();
             return;
         }

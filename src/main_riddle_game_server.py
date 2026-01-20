@@ -12,11 +12,9 @@ Endpoints:
 """
 
 from riddle.game_server import GameServer
-from wordle.wordle_game import WordleGame
 import sys
 import os
-from riddle import DATA_FOLDER_PATH
-
+from wordle import generate_wordle_factory
 
 def main():
     # Get secret key from environment variable or command line
@@ -32,35 +30,27 @@ def main():
         print("\nWARNING: Keep SECRET_KEY private! Don't commit it to git.")
         sys.exit(1)
     
-    # Type narrowing: secret_key is definitely str after the check above
     assert secret_key is not None
     
-    # Configuration for each game
-    english_words_file = DATA_FOLDER_PATH / "english_words.txt"
-    french_words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_FR_L5_base.txt"
-    
-    # Create game factories
-    def english_wordle_factory(date_str: str) -> WordleGame:
-        return WordleGame(date_str, english_words_file, secret_key)
-    
-    def french_wordle_factory(date_str: str) -> WordleGame:
-        return WordleGame(date_str, french_words_file, secret_key)
+    # Create game factories for wordle games
+
+    slug_factories = []
+    for lang in ["EN", "FR"]:
+        for length in [5, 6, 7]:
+            slug_factory = generate_wordle_factory(lang, length, secret_key)
+            slug_factories.append(slug_factory)
+
     
     # Create server with multiple games
-    server = GameServer([
-        ("wordle-en-5", english_wordle_factory),
-        ("wordle-fr-5", french_wordle_factory)
-    ])
+    server = GameServer(slug_factories)
     
     print("🎮 Multi-Language Wordle Server Starting...")
     print(f"🔐 Secret key: {'*' * len(secret_key)} (hidden)")
     print("\n📚 Game Configuration:")
-    print(f"  English words: {english_words_file}")
-    print(f"  French words:  {french_words_file}")
     print("\n🌍 Available Games:")
-    print("  English: http://127.0.0.1:8000/wordle-en-5")
-    print("  French:  http://127.0.0.1:8000/wordle-fr-5")
-    print("  Root:    http://127.0.0.1:8000/ (lists all games)")
+    print("  - http://127.0.0.1:8000/ (lists all games)")
+    for slug, _ in server.games.items():
+        print(f"  - http://127.0.0.1:8000/{slug}")
     print("\n⚠️  Keep the secret key private - it's used to generate daily words!")
     
     # Get port and host from environment or use defaults

@@ -26,13 +26,14 @@ class GuessResponse(BaseModel):
     game_over: bool
     message: str | None = None
 
+GameFactory = Callable[[str], RiddleGame]
 
 class GameServer:
     """Game-agnostic server that works with any RiddleGame implementation."""
     
     def __init__(
         self, 
-        games: list[tuple[str, Callable[[str], RiddleGame]]],
+        games: list[tuple[str, GameFactory]],
         secret_key: str = "your-secret-key-change-this-in-production"
     ):
         """
@@ -163,10 +164,14 @@ class GameServer:
         @self.app.get(f"/{slug}/api/info")
         async def get_game_info():
             """Get game information."""
+            # Get game instance to retrieve actual word length
+            today = self.get_today_date()
+            game = self.get_game_for_date(slug, today)
+            
             return {
-                "date": self.get_today_date(),
+                "date": today,
                 "slug": slug,
-                "word_length": 5,
+                "word_length": len(game.secret),
                 "max_attempts": 6,
             }
         
