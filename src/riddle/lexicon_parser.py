@@ -2,7 +2,6 @@ import dataclasses
 import enum
 from abc import ABC, abstractmethod
 from typing import ClassVar
-import pandas as pd
 
 
 class Grammar(enum.StrEnum):
@@ -151,6 +150,8 @@ class LexiconFR(Lexicon):
     
     @staticmethod
     def load(filepath):
+        import pandas as pd
+
         # Create dtype map
         dtype_map = LexiconFR.txt_column_dtypes_map.copy()
         
@@ -241,6 +242,8 @@ class LexiconEN(Lexicon):
     
     @staticmethod
     def load(filepath):
+        import pandas as pd
+
         # Define converters to handle comma-separated numbers
         def parse_freq(value):
             if not value or value.strip() == "":
