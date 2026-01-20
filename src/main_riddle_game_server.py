@@ -38,7 +38,7 @@ def main():
 
     game_factories = []
     for lang in [Language.EN, Language.FR]:
-        for length in [5, 6, 7]:
+        for length in range(3, 10):
             wordle_factory = generate_wordle_factory(lang, length, secret_key)
             game_factories.append(wordle_factory)
 
