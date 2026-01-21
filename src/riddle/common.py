@@ -287,3 +287,70 @@ def compute_letter_frequency(words: list[str]) -> dict[str, float]:
     count = sum(letter_histogram.values())
     letter_frequency = {k: v / count for k, v in letter_histogram.items()}
     return letter_frequency
+
+
+def compute_positional_letter_frequency(words: list[str]) -> list[dict[str, float]]:
+    """
+    Compute letter frequency for each position in words.
+    Returns a list of frequency maps, one for each position (0 to max_word_length-1).
+    
+    :param words: List of words to analyze
+    :return: List of dictionaries, where each dict maps letter -> frequency at that position
+    """
+    if not words:
+        return []
+    
+    max_length = max(len(word) for word in words)
+    frequency_maps = []
+    
+    for pos in range(max_length):
+        letter_histogram: dict[str, int] = {}
+        word_count_at_pos = 0
+        
+        for word in words:
+            if pos < len(word):
+                letter = word[pos]
+                letter_histogram[letter] = letter_histogram.get(letter, 0) + 1
+                word_count_at_pos += 1
+        
+        # Compute frequency for this position
+        if word_count_at_pos > 0:
+            frequency_map = {letter: count / word_count_at_pos 
+                           for letter, count in letter_histogram.items()}
+        else:
+            frequency_map = {}
+        
+        frequency_maps.append(frequency_map)
+    
+    return frequency_maps
+
+
+def compute_positional_letter_entropy(words: list[str]) -> list[dict[str, float]]:
+    """
+    Compute letter entropy for each position in words.
+    Entropy = -p * log2(p), which represents information content
+    
+    :param words: List of words to analyze
+    :return: List of dictionaries, where each dict maps letter -> entropy at that position
+    """
+    import math
+    
+    if not words:
+        return []
+    
+    # First get frequencies
+    frequency_maps = compute_positional_letter_frequency(words)
+    
+    # Convert frequencies to entropy
+    entropy_maps = []
+    for freq_map in frequency_maps:
+        entropy_map = {}
+        for letter, freq in freq_map.items():
+            if freq > 0:
+                # Entropy = -p * log2(p)
+                entropy_map[letter] = -freq * math.log2(freq)
+            else:
+                entropy_map[letter] = 0.0
+        entropy_maps.append(entropy_map)
+    
+    return entropy_maps

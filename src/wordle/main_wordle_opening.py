@@ -95,6 +95,53 @@ def append_solution_to_csv(csv_path: Path, frequency_score: float, words: list[s
         ])
 
 
+def compute_information_value(words: list[str], positional_entropy_maps: list[dict[str, float]]) -> float:
+    """
+    Compute the information value of a word combination, accounting for duplicate letters.
+    Uses entropy (information content) rather than raw frequency.
+    
+    In Wordle:
+    - First occurrence of a letter tells us: "this letter exists" + "at this position or elsewhere"
+    - Subsequent occurrences only add positional information (reduced value)
+    
+    :param words: List of words in the combination
+    :param positional_entropy_maps: List of entropy maps, one per position
+    :return: Total information value (in bits)
+    """
+    letter_positions = {}  # letter -> list of positions where it appears
+    
+    # Collect all (letter, position) pairs across all words
+    for word in words:
+        for pos, letter in enumerate(word):
+            if letter not in letter_positions:
+                letter_positions[letter] = []
+            letter_positions[letter].append(pos)
+    
+    total_value = 0.0
+    
+    for letter, positions in letter_positions.items():
+        # For each unique letter:
+        # - First occurrence gets full entropy value (information content)
+        # - Additional occurrences get reduced value (only positional differentiation)
+        
+        # Sort positions to process them consistently
+        sorted_positions = sorted(set(positions))  # unique positions only
+        
+        for i, pos in enumerate(sorted_positions):
+            if pos < len(positional_entropy_maps):
+                entropy_map = positional_entropy_maps[pos]
+                if letter in entropy_map:
+                    if i == 0:
+                        # First occurrence: full entropy value
+                        total_value += entropy_map[letter]
+                    else:
+                        # Additional occurrences: reduced value (30% for positional info)
+                        # This is a heuristic - the reduction factor could be tuned
+                        total_value += entropy_map[letter] * 0.3
+    
+    return total_value
+
+
 def find_word_with_different_letters(selected_words: list[str], word_list: list[str], N: int):
     if len(selected_words) == N:
         yield selected_words
@@ -104,7 +151,24 @@ def find_word_with_different_letters(selected_words: list[str], word_list: list[
             yield from find_word_with_different_letters(selected_words + [word], word_list[i + 1:], N)
 
 
-def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str], frequency_map: dict[str, float], top_k: int = 1, csv_path: Path = None):
+def find_best_word_combination(
+    df_words: pd.DataFrame, 
+    N: int, 
+    letters: list[str], 
+    positional_entropy_maps: list[dict[str, float]], 
+    top_k: int = 1, 
+    csv_path: Path = None
+):
+    """
+    Find the best word combinations using position-specific letter entropy.
+    
+    :param df_words: DataFrame with word data
+    :param N: Number of words per combination
+    :param letters: List of all possible letters
+    :param positional_entropy_maps: List of entropy dicts, one per position
+    :param top_k: Number of top solutions to find
+    :param csv_path: Optional path to CSV file for persistence
+    """
 
     solutions = []
     start_iteration = 0
@@ -115,7 +179,12 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
         initialize_csv_file(csv_path)
         start_iteration, excluded_combinations = load_existing_solutions(csv_path, df_words, N)
     
-    for iteration in range(start_iteration, start_iteration + top_k):
+    # If we already have enough solutions, just display them
+    if start_iteration >= top_k:
+        print(f"Already have {start_iteration} solutions, which is >= requested top-{top_k}. Nothing to do.")
+        return
+    
+    for iteration in range(start_iteration, top_k):
         # =========================
         # 3. ILP avec OR-Tools
         # =========================
@@ -173,13 +242,38 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
                     # No words have this letter at this position, z must be 0
                     solver.Add(z[letter][pos] == 0)
 
-        # Objective: maximize the sum of frequencies of distinct letters used
-        # Plus a small bonus (1/1000) for each unique (letter, position) pair
-        position_bonus = 0.001
-        solver.Maximize(
-            sum(frequency_map[letter] * y[letter] for letter in letters) +
-            position_bonus * sum(z[letter][pos] for letter in letters for pos in range(max_word_length))
-        )
+        # Objective: maximize position-specific letter entropy with duplicate penalty
+        # z[letter][pos] = 1 if letter appears at position pos in exactly one selected word
+        # We want to maximize information value (entropy), penalizing duplicate letters
+        max_word_length = len(positional_entropy_maps)
+        
+        objective_terms = []
+        
+        # For each letter, count how many positions it appears at
+        # First occurrence gets full weight, subsequent ones get reduced weight
+        for letter in letters:
+            letter_positions = []
+            for pos in range(max_word_length):
+                if pos < len(positional_entropy_maps):
+                    pos_entropy_map = positional_entropy_maps[pos]
+                    if letter in pos_entropy_map:
+                        letter_positions.append((pos, pos_entropy_map[letter]))
+            
+            # Sort by entropy (descending) to give highest weight to most informative position
+            letter_positions.sort(key=lambda x: x[1], reverse=True)
+            
+            for idx, (pos, entropy) in enumerate(letter_positions):
+                if idx == 0:
+                    # First occurrence: full weight
+                    weight = entropy
+                else:
+                    # Subsequent occurrences: reduced weight (30%)
+                    # This penalizes having the same letter multiple times
+                    weight = entropy * 0.3
+                
+                objective_terms.append(weight * z[letter][pos])
+        
+        solver.Maximize(sum(objective_terms))
 
         status = solver.Solve()
 
@@ -195,7 +289,9 @@ def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str]
             for word in selected_words:
                 all_letters.update(word)
             distinct_letter_count = len(all_letters)
-            total_frequency = sum(frequency_map[letter] for letter in all_letters)
+            
+            # Calculate information value using entropy
+            total_frequency = compute_information_value(selected_words, positional_entropy_maps)
             
             # Calculate unique position count
             unique_position_count = sum(
@@ -272,10 +368,11 @@ def find_best_opening(language: Language, length: int, N: int, top_k: int = 1):
     :return:
     """
     
-    # Create CSV filename with parameters
-    csv_filename = f"wordle_openings_{language.value}_L{length}_N{N}_top{top_k}.csv"
-    csv_path = DATA_FOLDER_PATH / "results" / csv_filename
+    # Create CSV filename with parameters (excluding top_k to allow incremental runs)
+    csv_filename = f"wordle_openings_{language.value}_L{length}_N{N}.csv"
+    csv_path = DATA_FOLDER_PATH / "wordle_openings" / csv_filename
     print(f"Results will be saved to: {csv_path}")
+    print(f"Requested top-{top_k} solutions (will continue from existing if file exists)")
 
     print(f"Loading {language} words of {length} distinct letters...")
 
@@ -286,20 +383,20 @@ def find_best_opening(language: Language, length: int, N: int, top_k: int = 1):
 
     print(f"Number  words: {len(words)}")
 
-    # compute frequency map
-    frequency_map = cmn.compute_letter_frequency(words)
+    # Compute positional entropy maps (one per position)
+    positional_entropy_maps = cmn.compute_positional_letter_entropy(words)
+    
+    # Also keep overall frequency for reference
+    overall_frequency_map = cmn.compute_letter_frequency(words)
 
-    # load frequency map
-    # frequency_map = cmn.merge_accented_letter_frequency(cmn.load_letters_frequency(language), cmn.load_accent_to_base_map())
+    # print N*L most frequent letters (overall)
+    sorted_letters = sorted(overall_frequency_map.items(), key=lambda item: item[1], reverse=True)
+    print(f"{N*length} most frequent letters (overall):", " ".join([item[0] for item in sorted_letters[:N*length]]))
 
-    # print N*L most frequent letters
-    sorted_letters = sorted(frequency_map.items(), key=lambda item: item[1], reverse=True)
-    print(f"{N*length} most frequent letters:", " ".join([item[0] for item in sorted_letters[:N*length]]))
+    df_words = compute_word_entropies(words, overall_frequency_map)
+    letters = list(overall_frequency_map.keys())
 
-    df_words = compute_word_entropies(words, frequency_map)
-    letters = list(frequency_map.keys())
-
-    find_best_word_combination(df_words, N, letters, frequency_map, top_k, csv_path)
+    find_best_word_combination(df_words, N, letters, positional_entropy_maps, top_k, csv_path)
 
 
 
@@ -345,3 +442,6 @@ if __name__ == "__main__":
     # english, length=5, N=2: ultra, noise
     # english, length=5, N=3: duchy, slain, trope
     # english, length=5, N=4: blank, crest, dough, wimpy
+
+if __name__ == "__main__":
+    main()

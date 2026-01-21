@@ -8,7 +8,9 @@ import pytest
 
 from riddle.common import (compute_correlation_matrix, compute_distance_matrix,
                            compute_heatmap_matrix, compute_similarity_matrix,
-                           load_most_frequent_words)
+                           load_most_frequent_words, compute_letter_frequency,
+                           compute_positional_letter_frequency,
+                           compute_positional_letter_entropy)
 
 
 class TestLoadMostFrequentWords:
@@ -213,3 +215,120 @@ class TestMatrixComputations:
         matrix = compute_correlation_matrix(mock_model, [])
         
         assert matrix.shape == (0, 0)
+
+class TestLetterFrequency:
+    """Tests for letter frequency computation functions"""
+    
+    def test_compute_letter_frequency_basic(self):
+        """Test basic letter frequency computation"""
+        words = ['abc', 'def', 'aeg']
+        freq = compute_letter_frequency(words)
+        
+        # Each word contributes 3 distinct letters = 9 total
+        # 'a' appears in 2 words, 'e' in 2, 'g' in 1
+        # Total unique letters counted = 3 + 3 + 3 = 9
+        assert freq['a'] == pytest.approx(2/9)
+        assert freq['e'] == pytest.approx(2/9)
+        assert freq['g'] == pytest.approx(1/9)
+        assert freq['b'] == pytest.approx(1/9)
+    
+    def test_compute_positional_letter_frequency_basic(self):
+        """Test position-specific letter frequency"""
+        words = ['abc', 'adc', 'bef']
+        freq_maps = compute_positional_letter_frequency(words)
+        
+        # Should return list of 3 dicts (one per position)
+        assert len(freq_maps) == 3
+        
+        # Position 0: 'a' appears in 2 words, 'b' in 1 word
+        assert freq_maps[0]['a'] == pytest.approx(2/3)
+        assert freq_maps[0]['b'] == pytest.approx(1/3)
+        
+        # Position 1: 'b' in 1, 'd' in 1, 'e' in 1
+        assert freq_maps[1]['b'] == pytest.approx(1/3)
+        assert freq_maps[1]['d'] == pytest.approx(1/3)
+        assert freq_maps[1]['e'] == pytest.approx(1/3)
+        
+        # Position 2: 'c' in 2, 'f' in 1
+        assert freq_maps[2]['c'] == pytest.approx(2/3)
+        assert freq_maps[2]['f'] == pytest.approx(1/3)
+    
+    def test_compute_positional_letter_frequency_different_lengths(self):
+        """Test with words of different lengths"""
+        words = ['ab', 'abc', 'abcd']
+        freq_maps = compute_positional_letter_frequency(words)
+        
+        # Should use max length = 4
+        assert len(freq_maps) == 4
+        
+        # Position 0: all 3 words have 'a'
+        assert freq_maps[0]['a'] == pytest.approx(1.0)
+        
+        # Position 3: only 1 word has position 3 ('d')
+        assert freq_maps[3]['d'] == pytest.approx(1.0)
+        assert len(freq_maps[3]) == 1  # Only 'd' exists at position 3
+    
+    def test_compute_positional_letter_frequency_empty(self):
+        """Test with empty word list"""
+        words = []
+        freq_maps = compute_positional_letter_frequency(words)
+        
+        assert freq_maps == []
+    
+    def test_compute_positional_letter_entropy_basic(self):
+        """Test entropy computation - entropy = -p * log2(p)"""
+        import math
+        
+        # Simple case: 2 words, equal probability letters at each position
+        words = ['ab', 'cd']
+        entropy_maps = compute_positional_letter_entropy(words)
+        
+        assert len(entropy_maps) == 2
+        
+        # Position 0: 'a' and 'c' each have p=0.5
+        # Entropy = -0.5 * log2(0.5) = 0.5 * 1 = 0.5
+        assert entropy_maps[0]['a'] == pytest.approx(-0.5 * math.log2(0.5))
+        assert entropy_maps[0]['c'] == pytest.approx(-0.5 * math.log2(0.5))
+        
+        # Position 1: 'b' and 'd' each have p=0.5
+        assert entropy_maps[1]['b'] == pytest.approx(0.5)
+        assert entropy_maps[1]['d'] == pytest.approx(0.5)
+    
+    def test_compute_positional_letter_entropy_skewed(self):
+        """Test entropy with skewed distribution - common letters have lower entropy"""
+        import math
+        
+        # Position 0: 'a' appears 3 times, 'b' once
+        words = ['ax', 'ay', 'az', 'bw']
+        entropy_maps = compute_positional_letter_entropy(words)
+        
+        # 'a' has p=0.75, entropy = -0.75 * log2(0.75) ≈ 0.311
+        # 'b' has p=0.25, entropy = -0.25 * log2(0.25) = 0.5
+        assert entropy_maps[0]['a'] == pytest.approx(-0.75 * math.log2(0.75))
+        assert entropy_maps[0]['b'] == pytest.approx(-0.25 * math.log2(0.25))
+        
+        # More common letter 'a' should have LOWER entropy than rare 'b'
+        assert entropy_maps[0]['a'] < entropy_maps[0]['b']
+    
+    def test_compute_positional_letter_entropy_maximum(self):
+        """Test that p=0.5 gives maximum entropy"""
+        import math
+        
+        words = ['ab', 'cd', 'ef', 'gh']  # 4 words
+        # Add skewed distribution: 'a' at pos 0 appears 3 times (p=0.75)
+        words_skewed = ['ax', 'ay', 'az', 'bw']
+        
+        entropy_equal = compute_positional_letter_entropy(['ab', 'cd'])  # p=0.5 for all
+        entropy_skewed = compute_positional_letter_entropy(words_skewed)  # p=0.75, 0.25
+        
+        # p=0.5 should have higher entropy than p=0.75
+        max_entropy = -0.5 * math.log2(0.5)  # = 0.5
+        assert entropy_equal[0]['a'] == pytest.approx(max_entropy)
+        assert entropy_skewed[0]['a'] < max_entropy
+    
+    def test_compute_positional_letter_frequency_empty(self):
+        """Test with empty word list"""
+        words = []
+        freq_maps = compute_positional_letter_frequency(words)
+        
+        assert freq_maps == []
