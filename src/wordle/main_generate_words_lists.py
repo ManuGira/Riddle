@@ -6,7 +6,7 @@ from wordle import get_wordle_word_list_filepath, get_lexicon_path
 from pathlib import Path
 
 
-def main(language: Language = Language.FR, word_length: int = 5, white_list: set[str] | None = None):
+def generate_words_list(language: Language = Language.FR, word_length: int = 5, white_list: set[str] | None = None):
     """
     Generate a word list for Wordle from the OpenLexicon lexicon.
     The resulting word list will contain words of the specified length,
@@ -101,34 +101,40 @@ def main(language: Language = Language.FR, word_length: int = 5, white_list: set
     print(f"Loaded lexicon in {tock - tick}")
 
 
-
-if __name__ == "__main__":
+def main():
     # Generate French word lists
     print("=" * 60)
     print("Generating French word lists...")
     print("=" * 60)
-    main(Language.FR, 3)
-    main(Language.FR, 4)
-    main(Language.FR, 5)
-    main(Language.FR, 6)
-    main(Language.FR, 7)
-    main(Language.FR, 8)
-    main(Language.FR, 9)
-    
+    generate_words_list(Language.FR, 3)
+    generate_words_list(Language.FR, 4)
+    generate_words_list(Language.FR, 5)
+    generate_words_list(Language.FR, 6)
+    generate_words_list(Language.FR, 7)
+    generate_words_list(Language.FR, 8)
+    generate_words_list(Language.FR, 9)
+    generate_words_list(Language.FR, 25)
+    whites = {"intergouvernementalisation", "intergouvernementalisations"}
+    generate_words_list(Language.FR, 26, white_list=whites)
+    generate_words_list(Language.FR, 27, white_list=whites)
+
     # Generate English word lists
     print("\n" + "=" * 60)
     print("Generating English word lists...")
     print("=" * 60)
-    main(Language.EN, 3)
-    main(Language.EN, 4)
+    generate_words_list(Language.EN, 3)
+    generate_words_list(Language.EN, 4)
 
     # For english len 5, load a white list from the file "data/english_words.txt"
     white_list_path = DATA_FOLDER_PATH / "english_words.txt"
     with open(white_list_path, "r", encoding="utf-8") as f:
         white_list = {line.strip().lower() for line in f if line.strip()}
-    main(Language.EN, 5, white_list=white_list)
+    generate_words_list(Language.EN, 5, white_list=white_list)
 
-    main(Language.EN, 6)
-    main(Language.EN, 7)
-    main(Language.EN, 8)
-    main(Language.EN, 9)
+    generate_words_list(Language.EN, 6)
+    generate_words_list(Language.EN, 7)
+    generate_words_list(Language.EN, 8)
+    generate_words_list(Language.EN, 9)
+
+if __name__ == "__main__":
+    main()

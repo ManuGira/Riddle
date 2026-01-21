@@ -23,7 +23,7 @@ def main():
     if len(sys.argv) >= 2:
         secret_key = sys.argv[1]
     else:
-        secret_key = os.getenv('SECRET_KEY')
+        secret_key = os.getenv('SECRET_KEY', "cool")
 
     if not secret_key:
         print("Usage: uv run src/wordle/main_multi_wordle_server.py <SECRET_KEY>")
@@ -42,6 +42,8 @@ def main():
             wordle_factory = generate_wordle_factory(lang, length, secret_key)
             game_factories.append(wordle_factory)
 
+    wordle_factory = generate_wordle_factory(Language.FR, 25, secret_key)
+    game_factories.append(wordle_factory)
     
     # Create server with multiple games
     server = GameServer(game_factories)
