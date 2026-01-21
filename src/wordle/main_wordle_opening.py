@@ -39,6 +39,7 @@ def compute_word_entropies(words: list[str], frequency_map: dict[str, float]) ->
     })
     return df_words
 
+
 def find_word_with_different_letters(selected_words: list[str], word_list: list[str], N: int):
     if len(selected_words) == N:
         yield selected_words
@@ -46,28 +47,6 @@ def find_word_with_different_letters(selected_words: list[str], word_list: list[
     for i, word in enumerate(word_list):
         if all(len(set(word) & set(sw)) == 0 for sw in selected_words):
             yield from find_word_with_different_letters(selected_words + [word], word_list[i + 1:], N)
-
-
-def find_best_word_combination_brute_force(df_words: pd.DataFrame, N: int, metric: str):
-    # get sorted list of sorted words by metric (entropy or frequency)
-    words = df_words.sort_values(by=metric, ascending=False)["word"].tolist()
-    solutions = []
-
-    for solution in find_word_with_different_letters([], words, N=N):
-        metric_score = sum(df_words[df_words["word"] == w][metric].values[0] for w in solution)
-        solutions.append((metric_score, solution))
-
-    # sort solutions by metric_score
-    solutions = sorted(solutions, key=lambda x: x[0], reverse=True)
-    print(f"Top solutions by {metric}:")
-    for i, solution in enumerate(solutions):
-        metric_score, solution = solution
-        print(f"metric={metric_score:.2f}: ({', '.join(solution)})")
-        if i >= 10:
-            break
-    print()
-
-
 
 
 def find_best_word_combination(df_words: pd.DataFrame, N:int, letters: list[str], frequency_map: dict[str, float]):
@@ -215,8 +194,6 @@ def find_best_opening(language: Language, length: int, N: int):
     df_words = compute_word_entropies(words, frequency_map)
     letters = list(frequency_map.keys())
 
-    # find_best_word_combination_brute_force(df_words, N, metric="frequency")
-    # find_best_word_combination_brute_force(df_words, N, metric="entropy")
     find_best_word_combination(df_words, N, letters, frequency_map)
 
 
@@ -244,6 +221,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
 
     find_best_opening(Language(args.language.upper), args.length, args.N)
 
