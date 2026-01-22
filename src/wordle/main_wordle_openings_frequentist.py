@@ -181,7 +181,7 @@ def _compute_cross_hints_numba_parallel_kernel(words_array: np.ndarray, hints_ma
     L = words_array.shape[1]
     print("Starting parallel computation...")
     # Parallel over rows
-    for i in prange(N):
+    for i in prange(N):  # type: ignore[misc]
         for j in range(i, N):
             # Part 1: Position matches
             for pos in range(L):
@@ -446,7 +446,7 @@ def _evaluate_opening_entropy_numba_parallel_kernel(
     L = words_array.shape[1]
     num_openings = len(opening_indices)
     
-    for k in prange(N):
+    for k in prange(N):  # type: ignore[misc]
         # Merge position hints from all opening words
         pos_hint = np.zeros(L, dtype=np.uint8)
         letters_mask = np.uint32(0)
@@ -546,7 +546,7 @@ def main():
     words = ["apple", "brave", "crane", "doubt", "eagle", "flint", "grape", "honey", "input", "jumpy"]
 
     # load words from data/words_lists/wordle_list_{language}_L{length}_base.txt
-    words_file = DATA_FOLDER_PATH / "words_lists" / f"wordle_list_EN_L5_base.txt"
+    words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"
     with open(words_file, encoding="utf-8") as f:
         words = [w.strip() for w in f if w.strip()]
     compute_word_match_with_hints_matrix(words)

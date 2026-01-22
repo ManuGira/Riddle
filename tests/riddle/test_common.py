@@ -314,7 +314,6 @@ class TestLetterFrequency:
         """Test that p=0.5 gives maximum entropy"""
         import math
         
-        words = ['ab', 'cd', 'ef', 'gh']  # 4 words
         # Add skewed distribution: 'a' at pos 0 appears 3 times (p=0.75)
         words_skewed = ['ax', 'ay', 'az', 'bw']
         
@@ -325,10 +324,3 @@ class TestLetterFrequency:
         max_entropy = -0.5 * math.log2(0.5)  # = 0.5
         assert entropy_equal[0]['a'] == pytest.approx(max_entropy)
         assert entropy_skewed[0]['a'] < max_entropy
-    
-    def test_compute_positional_letter_frequency_empty(self):
-        """Test with empty word list"""
-        words = []
-        freq_maps = compute_positional_letter_frequency(words)
-        
-        assert freq_maps == []

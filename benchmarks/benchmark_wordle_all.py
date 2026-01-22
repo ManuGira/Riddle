@@ -11,7 +11,7 @@ from benchmark_opening_entropy import run_comprehensive_benchmark, benchmark_wit
 def main():
     """Run all wordle benchmarks."""
     print(f"\n{'=' * 80}")
-    print(f"WORDLE BENCHMARKS - COMPREHENSIVE SUITE")
+    print("WORDLE BENCHMARKS - COMPREHENSIVE SUITE")
     print(f"Started at {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'=' * 80}\n")
     
@@ -37,7 +37,7 @@ def main():
         print(f"\nReal word benchmark failed: {e}")
     
     print(f"\n{'=' * 80}")
-    print(f"ALL BENCHMARKS COMPLETE")
+    print("ALL BENCHMARKS COMPLETE")
     print(f"Completed at {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'=' * 80}\n")
 

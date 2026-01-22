@@ -8,20 +8,6 @@ from pathlib import Path
 
 import numpy as np
 
-# Clear Numba cache to avoid module path issues
-numba_cache = Path(__file__).parent.parent / "src" / "wordle" / "__pycache__"
-if numba_cache.exists():
-    for cache_file in numba_cache.glob("*.nbi"):
-        try:
-            cache_file.unlink()
-        except:
-            pass
-    for cache_file in numba_cache.glob("*.nbc"):
-        try:
-            cache_file.unlink()
-        except:
-            pass
-
 from riddle import DATA_FOLDER_PATH
 from wordle.main_wordle_openings_frequentist import (
     NUMBA_AVAILABLE,
@@ -31,6 +17,20 @@ from wordle.main_wordle_openings_frequentist import (
     evaluate_opening_entropy_numba,
     evaluate_opening_entropy_numba_parallel,
 )
+
+# Clear Numba cache to avoid module path issues
+numba_cache = Path(__file__).parent.parent / "src" / "wordle" / "__pycache__"
+if numba_cache.exists():
+    for cache_file in numba_cache.glob("*.nbi"):
+        try:
+            cache_file.unlink()
+        except Exception:
+            pass
+    for cache_file in numba_cache.glob("*.nbc"):
+        try:
+            cache_file.unlink()
+        except Exception:
+            pass
 
 
 def load_words_and_hints(n_words: int) -> tuple[list[str], np.ndarray, np.ndarray]:
@@ -164,7 +164,7 @@ def run_implementation_comparison():
                     print(f"  ⚠ {name} remaining mismatch: {result['remaining']} vs {ref_remaining}")
                     all_match = False
             if all_match:
-                print(f"  ✓ All implementations produce matching results")
+                print("  ✓ All implementations produce matching results")
     
     print()
     print("=" * 80)
@@ -188,7 +188,7 @@ def benchmark_with_real_words():
         words_list = [w.strip().upper() for w in f if w.strip()]
     
     print(f"\nLoaded {len(words_list)} words from {words_file.name}")
-    print(f"Precomputing hint matrix...")
+    print("Precomputing hint matrix...")
     
     # Prepare arrays and hint matrix
     words_array = np.array(
@@ -244,7 +244,7 @@ def benchmark_with_real_words():
             
             print(f"   {label:<35} {elapsed*1000:>8.2f} ms   "
                   f"{entropy:>8.2f}     {remaining:>8.2f}")
-        except ValueError as e:
+        except ValueError:
             print(f"   {label:<35} Word not found in list")
     
     print()

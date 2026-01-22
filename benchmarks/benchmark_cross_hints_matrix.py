@@ -5,9 +5,17 @@ Compares performance of different implementations.
 
 import time
 import numpy as np
-import sys
-import os
 from pathlib import Path
+
+from riddle import DATA_FOLDER_PATH
+from wordle.main_wordle_openings_frequentist import (
+    compute_cross_hints_matrix,
+    compute_cross_hints_matrix_optimized,
+    compute_cross_hints_matrix_fast,
+    compute_cross_hints_matrix_numba,
+    compute_cross_hints_matrix_numba_parallel,
+    NUMBA_AVAILABLE,
+)
 
 # Add src to path for imports
 # src_path = Path(__file__).parent.parent / "src"
@@ -19,23 +27,13 @@ if numba_cache.exists():
     for cache_file in numba_cache.glob("*.nbi"):
         try:
             cache_file.unlink()
-        except:
+        except Exception:
             pass
     for cache_file in numba_cache.glob("*.nbc"):
         try:
             cache_file.unlink()
-        except:
+        except Exception:
             pass
-
-from riddle import DATA_FOLDER_PATH
-from wordle.wordle_openings_2 import (
-    compute_cross_hints_matrix,
-    compute_cross_hints_matrix_optimized,
-    compute_cross_hints_matrix_fast,
-    compute_cross_hints_matrix_numba,
-    compute_cross_hints_matrix_numba_parallel,
-    NUMBA_AVAILABLE,
-)
 
 
 def load_words_array_from_file(n_words: int) -> np.ndarray:
@@ -102,7 +100,7 @@ def run_benchmark_suite():
         
         # Benchmark original (skip for large N)
         if n_words <= 100:
-            print(f"  Original implementation...")
+            print("  Original implementation...")
             result, elapsed = benchmark_implementation(
                 compute_cross_hints_matrix, words_array, "original"
             )
@@ -114,7 +112,7 @@ def run_benchmark_suite():
             reference = None
         
         # Benchmark optimized
-        print(f"  Optimized implementation...")
+        print("  Optimized implementation...")
         result, elapsed = benchmark_implementation(
             compute_cross_hints_matrix_optimized, words_array, "optimized"
         )
@@ -124,7 +122,7 @@ def run_benchmark_suite():
             reference = result
         
         # Benchmark fast
-        print(f"  Fast implementation...")
+        print("  Fast implementation...")
         result, elapsed = benchmark_implementation(
             compute_cross_hints_matrix_fast, words_array, "fast"
         )
@@ -133,7 +131,7 @@ def run_benchmark_suite():
         
         # Benchmark numba if available
         if NUMBA_AVAILABLE:
-            print(f"  Numba implementation...")
+            print("  Numba implementation...")
             try:
                 result, elapsed = benchmark_implementation(
                     compute_cross_hints_matrix_numba, words_array, "numba", warm_up=True
@@ -143,7 +141,7 @@ def run_benchmark_suite():
             except Exception as e:
                 print(f"    FAILED: {e}")
             
-            print(f"  Numba parallel implementation...")
+            print("  Numba parallel implementation...")
             try:
                 result, elapsed = benchmark_implementation(
                     compute_cross_hints_matrix_numba_parallel, words_array, "numba_parallel", warm_up=True
@@ -153,10 +151,10 @@ def run_benchmark_suite():
             except Exception as e:
                 print(f"    FAILED: {e}")
         else:
-            print(f"  Numba implementations: NOT AVAILABLE (install numba for better performance)")
+            print("  Numba implementations: NOT AVAILABLE (install numba for better performance)")
         
         # Verify correctness
-        print(f"\n  Correctness verification:")
+        print("\n  Correctness verification:")
         all_correct = True
         for name, (result, _) in results.items():
             if name == "original" and n_words <= 100:
@@ -168,10 +166,10 @@ def run_benchmark_suite():
                 all_correct = False
         
         if not all_correct:
-            print(f"  ⚠ WARNING: Some implementations produced different results!")
+            print("  ⚠ WARNING: Some implementations produced different results!")
         
         # Performance comparison
-        print(f"\n  Performance comparison:")
+        print("\n  Performance comparison:")
         baseline_time = results.get("original", results.get("optimized", results["fast"]))[1]
         
         for name, (_, elapsed) in sorted(results.items(), key=lambda x: x[1][1]):

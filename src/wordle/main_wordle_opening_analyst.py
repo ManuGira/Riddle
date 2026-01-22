@@ -157,7 +157,7 @@ def find_best_word_combination(
     letters: list[str], 
     positional_entropy_maps: list[dict[str, float]], 
     top_k: int = 1, 
-    csv_path: Path = None
+    csv_path: Path | None = None
 ):
     """
     Find the best word combinations using position-specific letter entropy.
