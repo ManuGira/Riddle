@@ -238,6 +238,43 @@ def load_words_combinations(csv_file: Path):
     return words_combinations
 
 
+def evaluate_opening_entropy(words_array: np.ndarray, hint_matrix: np.ndarray, opening_words_indices: list[int]):
+    """
+    Evaluate the expected entropy and expected remaining words
+    after applying the hints from the given opening words.
+    :param words_array: A numpy array of shape (N, L) with all possible words. N is number of words, L is word length.
+    :param hint_matrix: A numpy array of shape (N, N, 2L) with precomputed hints between all word pairs.
+    :param opening_words_indices: List of indices of the opening words in words_array. Indices are in range [0, N-1].s
+    :return:
+    """
+    expected_entropy = 0.0
+    expected_remaning_words = 0.0
+    N, L = words_array.shape[0:2]
+
+    for k in range(N):
+        hint = np.zeros(2 * L, dtype=np.uint8)
+        for i in opening_words_indices:
+            hint_i = hint_matrix[i, k]
+            # merge hints
+            hint[:L] = np.max((hint[:L], hint_i[:L]), axis=0)
+            matching_letters = (set(hint[L:]) | set(hint_i[L:])) - {0}
+            hint[L:L+len(matching_letters)] = list(matching_letters)
+
+        # find compatible words
+        compatibles = np.argwhere(np.all(np.logical_or((hint[:L] == 0), (words_array == hint[:L])), axis=1)).flatten()
+        letters_set = set(hint[L:]) - {0}
+        compatibles = [carg for carg in compatibles if letters_set.issubset(set(words_array[carg]))]
+        p_k = len(compatibles)/N
+        expected_remaning_words += len(compatibles)
+        if p_k == 0:
+            raise ValueError("p_k is zero, which should not happen.")
+        entropy_k = -np.log2(p_k)
+        expected_entropy += entropy_k
+    expected_remaning_words /= N
+    expected_entropy /= N
+    return expected_entropy, expected_remaning_words
+
+
 def compute_word_match_with_hints_matrix(words_list: list[str]):
     N = len(words_list)
     L = len(words_list[0])
@@ -251,35 +288,26 @@ def compute_word_match_with_hints_matrix(words_list: list[str]):
 
 
     opening_candidates_file = DATA_FOLDER_PATH / "wordle_openings" / "wordle_openings_EN_L5_N4.csv"
-    candidates_list = load_words_combinations(opening_candidates_file)
+    opening_list = load_words_combinations(opening_candidates_file)
 
-    candidates_list = [
+    opening_list = [
                           ["BLANK", "BLANK", "BLANK", "BLANK"],
                           ["BLANK", "CREST", "BLANK", "BLANK"],
                           ["BLANK", "CREST", "WIMPY", "BLANK"],
                           ["BLANK", "CREST", "WIMPY", "DOUGH"],
-                      ] + candidates_list
+                      ] + opening_list
 
-    for candidates in candidates_list:
-        p = 0.0
-        words_indices = [words_list.index(w) for w in candidates]
-        for k, secret_word in enumerate(words_list):
-            hint = np.zeros(2 * L, dtype=np.uint8)
-            for i in words_indices:
-                hint_i = hint_matrix[i, k]
-                # merge hints
-                hint[:L] = np.max((hint[:L], hint_i[:L]), axis=0)
-                matching_letters = (set(hint[L:]) | set(hint_i[L:])) - {0}
-                hint[L:L+len(matching_letters)] = list(matching_letters)
 
-            # find compatible words
-            # compatibles = np.argwhere(np.sum((words_array-hint[:L])*hint[:L], axis=1)==0).flatten()
-            compatibles = np.argwhere(np.all(np.logical_or((hint[:L] == 0), (words_array == hint[:L])), axis=1)).flatten()
-            letters_set = set(hint[L:]) - {0}
-            compatibles = [carg for carg in compatibles if letters_set.issubset(set(words_array[carg]))]
-            p += len(compatibles)/N
-        p /= N
-        print("Candidates:", candidates, "Avg remaining words:", p, "score: ", 1/p if p>0 else float('inf'))
+    # expected_entropies: list[tuple[list[str], float]] = []
+    
+    for opening in opening_list:
+        opening_words_indices = [words_list.index(w) for w in opening]
+
+        expected_entropy, expected_remaning_words = evaluate_opening_entropy(words_array, hint_matrix,
+                                                                             opening_words_indices)
+        # expected_entropies.append((opening, expected_entropy))
+        print(f"Opening: {'-'.join(opening)}, Avg remaining words: {expected_remaning_words:.2f}, entropy: {expected_entropy:.2f}")
+    return 
 
 
 def main():
@@ -290,10 +318,6 @@ def main():
     with open(words_file, encoding="utf-8") as f:
         words = [w.strip() for w in f if w.strip()]
     compute_word_match_with_hints_matrix(words)
-
-
-
-
 
 if __name__ == "__main__":
     main()
