@@ -10,6 +10,10 @@ from wordle.wordle_openings_2 import (
     compute_cross_hints_matrix_fast,
     compute_cross_hints_matrix_numba,
     compute_cross_hints_matrix_numba_parallel,
+    evaluate_opening_entropy,
+    evaluate_opening_entropy_optimized,
+    evaluate_opening_entropy_numba,
+    evaluate_opening_entropy_numba_parallel,
     NUMBA_AVAILABLE,
 )
 
@@ -356,6 +360,175 @@ class TestOptimizedVersions:
         np.testing.assert_array_equal(original[:, :, :3], fast[:, :, :3])
 
 
+def get_all_cross_hints_implementations():
+    """Get all compute_cross_hints_matrix implementations for parametrized testing."""
+    implementations = [
+        ("original", compute_cross_hints_matrix),
+        ("optimized", compute_cross_hints_matrix_optimized),
+        ("fast", compute_cross_hints_matrix_fast),
+    ]
+    if NUMBA_AVAILABLE:
+        implementations.extend([
+            ("numba", compute_cross_hints_matrix_numba),
+            ("numba_parallel", compute_cross_hints_matrix_numba_parallel),
+        ])
+    return implementations
+
+
+class TestAllCrossHintsImplementations:
+    """Parametrized tests to verify ALL compute_cross_hints_matrix implementations produce equivalent results."""
+    
+    @pytest.fixture
+    def all_implementations(self):
+        """Return all available implementations."""
+        return get_all_cross_hints_implementations()
+    
+    def _assert_results_equivalent(self, result1, result2, name1, name2, L):
+        """Assert that two hint matrices are equivalent (position matches identical, common letters same set)."""
+        N = result1.shape[0]
+        
+        # Position matches should be identical
+        np.testing.assert_array_equal(
+            result1[:, :, :L], result2[:, :, :L],
+            err_msg=f"Position matches differ between {name1} and {name2}"
+        )
+        
+        # Common letters may be in different order, check sets match
+        for i in range(N):
+            for j in range(N):
+                common1 = set(result1[i, j, L:]) - {0}
+                common2 = set(result2[i, j, L:]) - {0}
+                assert common1 == common2, \
+                    f"Common letters mismatch at ({i},{j}) between {name1} and {name2}: {common1} vs {common2}"
+    
+    def test_all_implementations_match_basic(self, all_implementations):
+        """Test all implementations produce equivalent results on basic input."""
+        words = ["apple", "brave", "crane"]
+        words_array = words_to_array(words)
+        L = 5
+        
+        # Get reference result from first implementation
+        ref_name, ref_func = all_implementations[0]
+        ref_result = ref_func(words_array)
+        
+        # Compare all other implementations to reference
+        for name, func in all_implementations[1:]:
+            result = func(words_array)
+            self._assert_results_equivalent(ref_result, result, ref_name, name, L)
+    
+    def test_all_implementations_match_larger(self, all_implementations):
+        """Test all implementations on a larger word set."""
+        words = [
+            "apple", "brave", "crane", "doubt", "eagle",
+            "flint", "grape", "honey", "input", "jumpy"
+        ]
+        words_array = words_to_array(words)
+        L = 5
+        
+        ref_name, ref_func = all_implementations[0]
+        ref_result = ref_func(words_array)
+        
+        for name, func in all_implementations[1:]:
+            result = func(words_array)
+            self._assert_results_equivalent(ref_result, result, ref_name, name, L)
+    
+    def test_all_implementations_shape_and_dtype(self, all_implementations):
+        """Test all implementations return correct shape and dtype."""
+        words = ["apple", "brave", "crane"]
+        words_array = words_to_array(words)
+        N, L = len(words), 5
+        
+        for name, func in all_implementations:
+            result = func(words_array)
+            assert result.shape == (N, N, 2 * L), f"{name} has wrong shape: {result.shape}"
+            assert result.dtype == np.uint8, f"{name} has wrong dtype: {result.dtype}"
+    
+    def test_all_implementations_symmetry(self, all_implementations):
+        """Test all implementations produce symmetric matrices."""
+        words = ["apple", "brave", "crane", "doubt"]
+        words_array = words_to_array(words)
+        N = len(words)
+        
+        for name, func in all_implementations:
+            result = func(words_array)
+            for i in range(N):
+                for j in range(N):
+                    np.testing.assert_array_equal(
+                        result[i, j], result[j, i],
+                        err_msg=f"{name} not symmetric at ({i},{j}) vs ({j},{i})"
+                    )
+    
+    def test_all_implementations_single_word(self, all_implementations):
+        """Test all implementations with single word."""
+        words = ["alone"]
+        words_array = words_to_array(words)
+        expected = np.array(list("ALONE".encode('utf-8')), dtype=np.uint8)
+        
+        for name, func in all_implementations:
+            result = func(words_array)
+            assert result.shape == (1, 1, 10), f"{name} wrong shape for single word"
+            np.testing.assert_array_equal(
+                result[0, 0, :5], expected,
+                err_msg=f"{name} wrong position matches for single word"
+            )
+    
+    def test_all_implementations_no_common_letters(self, all_implementations):
+        """Test all implementations with words having no common letters."""
+        words = ["abcde", "fghij"]
+        words_array = words_to_array(words)
+        
+        for name, func in all_implementations:
+            result = func(words_array)
+            # No matching positions
+            assert np.all(result[0, 1, :5] == 0), f"{name} should have no position matches"
+            # No common letters
+            assert np.all(result[0, 1, 5:] == 0), f"{name} should have no common letters"
+    
+    def test_all_implementations_three_letter_words(self, all_implementations):
+        """Test all implementations with shorter words (L=3)."""
+        words = ["cat", "bat", "car"]
+        words_array = words_to_array(words)
+        L = 3
+        
+        ref_name, ref_func = all_implementations[0]
+        ref_result = ref_func(words_array)
+        
+        for name, func in all_implementations[1:]:
+            result = func(words_array)
+            assert result.shape == (3, 3, 6), f"{name} wrong shape for 3-letter words"
+            self._assert_results_equivalent(ref_result, result, ref_name, name, L)
+    
+    def test_all_implementations_real_words(self, all_implementations):
+        """Test all implementations with real words from the word list."""
+        from riddle import DATA_FOLDER_PATH
+        words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"
+        with open(words_file, encoding="utf-8") as f:
+            words = [w.strip().upper() for w in f if w.strip()][:20]
+        
+        words_array = words_to_array(words)
+        L = 5
+        
+        ref_name, ref_func = all_implementations[0]
+        ref_result = ref_func(words_array)
+        
+        for name, func in all_implementations[1:]:
+            result = func(words_array)
+            self._assert_results_equivalent(ref_result, result, ref_name, name, L)
+    
+    @pytest.mark.skipif(not NUMBA_AVAILABLE, reason="Numba not available")
+    def test_numba_implementations_available(self):
+        """Test that Numba implementations are available when Numba is installed."""
+        words = ["apple", "brave"]
+        words_array = words_to_array(words)
+        
+        # These should not raise
+        result_numba = compute_cross_hints_matrix_numba(words_array)
+        result_parallel = compute_cross_hints_matrix_numba_parallel(words_array)
+        
+        assert result_numba.shape == (2, 2, 10)
+        assert result_parallel.shape == (2, 2, 10)
+
+
 class TestEvaluateOpeningEntropy:
     """Unit tests for evaluate_opening_entropy function."""
     
@@ -542,3 +715,142 @@ class TestEvaluateOpeningEntropy:
         
         # With 50 words and 3 opening words, should narrow down significantly
         assert remaining < len(words_list), "Should reduce word space"
+
+
+class TestEvaluateOpeningEntropyImplementations:
+    """Test that all evaluate_opening_entropy implementations produce identical results."""
+    
+    def _get_implementations(self):
+        """Get list of all implementations to test."""
+        implementations = [
+            ("original", evaluate_opening_entropy),
+            ("optimized", evaluate_opening_entropy_optimized),
+        ]
+        if NUMBA_AVAILABLE:
+            implementations.extend([
+                ("numba", evaluate_opening_entropy_numba),
+                ("numba_parallel", evaluate_opening_entropy_numba_parallel),
+            ])
+        return implementations
+    
+    def test_implementations_match_small(self):
+        """Test all implementations produce same results with small word list."""
+        words_list = ["APPLE", "APPLY", "AMPLE", "MAPLE", "PLANE"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        opening_indices = [0, 2]
+        
+        implementations = self._get_implementations()
+        ref_name, ref_func = implementations[0]
+        ref_entropy, ref_remaining = ref_func(words_array, hint_matrix, opening_indices)
+        
+        for name, func in implementations[1:]:
+            entropy, remaining = func(words_array, hint_matrix, opening_indices)
+            assert np.isclose(entropy, ref_entropy, rtol=1e-5), \
+                f"{name} entropy {entropy} != {ref_name} {ref_entropy}"
+            assert np.isclose(remaining, ref_remaining, rtol=1e-5), \
+                f"{name} remaining {remaining} != {ref_name} {ref_remaining}"
+    
+    def test_implementations_match_medium(self):
+        """Test all implementations with 50 words."""
+        from riddle import DATA_FOLDER_PATH
+        words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"
+        with open(words_file, encoding="utf-8") as f:
+            words_list = [w.strip().upper() for w in f if w.strip()][:50]
+        
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        opening_indices = [0, 10]
+        
+        implementations = self._get_implementations()
+        ref_name, ref_func = implementations[0]
+        ref_entropy, ref_remaining = ref_func(words_array, hint_matrix, opening_indices)
+        
+        for name, func in implementations[1:]:
+            entropy, remaining = func(words_array, hint_matrix, opening_indices)
+            assert np.isclose(entropy, ref_entropy, rtol=1e-5), \
+                f"{name} entropy {entropy} != {ref_name} {ref_entropy}"
+            assert np.isclose(remaining, ref_remaining, rtol=1e-5), \
+                f"{name} remaining {remaining} != {ref_name} {ref_remaining}"
+    
+    def test_implementations_match_single_opening(self):
+        """Test all implementations with single opening word."""
+        from riddle import DATA_FOLDER_PATH
+        words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"
+        with open(words_file, encoding="utf-8") as f:
+            words_list = [w.strip().upper() for w in f if w.strip()][:30]
+        
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        opening_indices = [5]  # Single opening word
+        
+        implementations = self._get_implementations()
+        ref_name, ref_func = implementations[0]
+        ref_entropy, ref_remaining = ref_func(words_array, hint_matrix, opening_indices)
+        
+        for name, func in implementations[1:]:
+            entropy, remaining = func(words_array, hint_matrix, opening_indices)
+            assert np.isclose(entropy, ref_entropy, rtol=1e-5), \
+                f"{name} entropy {entropy} != {ref_name} {ref_entropy}"
+            assert np.isclose(remaining, ref_remaining, rtol=1e-5), \
+                f"{name} remaining {remaining} != {ref_name} {ref_remaining}"
+    
+    def test_implementations_match_triple_opening(self):
+        """Test all implementations with three opening words."""
+        from riddle import DATA_FOLDER_PATH
+        words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"
+        with open(words_file, encoding="utf-8") as f:
+            words_list = [w.strip().upper() for w in f if w.strip()][:40]
+        
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        opening_indices = [0, 15, 30]
+        
+        implementations = self._get_implementations()
+        ref_name, ref_func = implementations[0]
+        ref_entropy, ref_remaining = ref_func(words_array, hint_matrix, opening_indices)
+        
+        for name, func in implementations[1:]:
+            entropy, remaining = func(words_array, hint_matrix, opening_indices)
+            assert np.isclose(entropy, ref_entropy, rtol=1e-5), \
+                f"{name} entropy {entropy} != {ref_name} {ref_entropy}"
+            assert np.isclose(remaining, ref_remaining, rtol=1e-5), \
+                f"{name} remaining {remaining} != {ref_name} {ref_remaining}"
+    
+    def test_implementations_match_empty_opening(self):
+        """Test all implementations with no opening words."""
+        words_list = ["APPLE", "APPLY", "AMPLE", "MAPLE", "PLANE"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        opening_indices = []
+        
+        implementations = self._get_implementations()
+        ref_name, ref_func = implementations[0]
+        ref_entropy, ref_remaining = ref_func(words_array, hint_matrix, opening_indices)
+        
+        for name, func in implementations[1:]:
+            entropy, remaining = func(words_array, hint_matrix, opening_indices)
+            assert np.isclose(entropy, ref_entropy, rtol=1e-5), \
+                f"{name} entropy {entropy} != {ref_name} {ref_entropy}"
+            assert np.isclose(remaining, ref_remaining, rtol=1e-5), \
+                f"{name} remaining {remaining} != {ref_name} {ref_remaining}"
+    
+    @pytest.mark.skipif(not NUMBA_AVAILABLE, reason="Numba not available")
+    def test_numba_versions_no_nan_inf(self):
+        """Test that Numba versions don't produce NaN or inf."""
+        from riddle import DATA_FOLDER_PATH
+        words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"
+        with open(words_file, encoding="utf-8") as f:
+            words_list = [w.strip().upper() for w in f if w.strip()][:100]
+        
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        opening_indices = [0, 25, 50]
+        
+        for name, func in [("numba", evaluate_opening_entropy_numba), 
+                           ("numba_parallel", evaluate_opening_entropy_numba_parallel)]:
+            entropy, remaining = func(words_array, hint_matrix, opening_indices)
+            assert not np.isnan(entropy), f"{name} produced NaN entropy"
+            assert not np.isnan(remaining), f"{name} produced NaN remaining"
+            assert not np.isinf(entropy), f"{name} produced inf entropy"
+            assert not np.isinf(remaining), f"{name} produced inf remaining"

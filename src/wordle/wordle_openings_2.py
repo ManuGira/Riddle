@@ -275,10 +275,242 @@ def evaluate_opening_entropy(words_array: np.ndarray, hint_matrix: np.ndarray, o
     return expected_entropy, expected_remaning_words
 
 
-def compute_word_match_with_hints_matrix(words_list: list[str]):
-    N = len(words_list)
-    L = len(words_list[0])
+def evaluate_opening_entropy_optimized(words_array: np.ndarray, hint_matrix: np.ndarray, opening_words_indices: list[int]):
+    """
+    Optimized version of evaluate_opening_entropy.
+    
+    Optimizations:
+    1. Precompute letter presence bitmasks for all words (avoids repeated set() calls)
+    2. Vectorize position matching across all words
+    3. Use numpy operations instead of Python loops where possible
+    4. Batch hint merging for all opening words
+    """
+    N, L = words_array.shape
+    
+    if len(opening_words_indices) == 0:
+        # No opening words = no information, all words remain compatible
+        return 0.0, float(N)
+    
+    # Precompute letter presence as bitmask for each word (using 32 bits for a-z)
+    # letters_presence[i] is a 32-bit int where bit (letter - ord('A')) is set if letter is in word i
+    letters_presence = np.zeros(N, dtype=np.uint32)
+    for pos in range(L):
+        # Must convert to int32 first to avoid uint8 overflow on shift
+        shift_amounts = words_array[:, pos].astype(np.int32) - ord('A')
+        letters_presence |= ((np.uint32(1) << shift_amounts)).astype(np.uint32)
+    
+    # For each target word k, merge hints from all opening words
+    # and count compatible words
+    total_entropy = 0.0
+    total_remaining = 0
+    
+    # Stack hints from all opening words: shape (num_openings, N, 2L)
+    opening_hints = hint_matrix[opening_words_indices, :, :]  # (num_openings, N, 2L)
+    
+    # Merge position hints: take max across openings for each target word
+    # merged_positions[k, pos] = max over all opening words i of hint_matrix[i, k, pos]
+    merged_positions = np.max(opening_hints[:, :, :L], axis=0)  # (N, L)
+    
+    # For common letters, we need to union across all opening words
+    # Build merged letter mask for each target word
+    merged_letters_mask = np.zeros(N, dtype=np.uint32)
+    for i in opening_words_indices:
+        for pos in range(L):
+            # Get the common letters from hint_matrix[i, :, L+pos]
+            letters = hint_matrix[i, :, L + pos]  # (N,) - letter at position L+pos for all targets
+            # Only add non-zero letters to the mask
+            nonzero_mask = letters > 0
+            shift_amounts = letters[nonzero_mask].astype(np.int32) - ord('A')
+            merged_letters_mask[nonzero_mask] |= ((np.uint32(1) << shift_amounts)).astype(np.uint32)
+    
+    # Now for each target word k, find compatible words
+    for k in range(N):
+        pos_hint = merged_positions[k]  # (L,) - position constraints
+        letters_mask = merged_letters_mask[k]  # required letters as bitmask
+        
+        # Check position compatibility: for each word, all positions must match or hint is 0
+        # words_array has shape (N, L), pos_hint has shape (L,)
+        pos_match = (pos_hint == 0) | (words_array == pos_hint)  # (N, L)
+        pos_compatible = np.all(pos_match, axis=1)  # (N,)
+        
+        # Check letter compatibility: required letters must be subset of word's letters
+        # (letters_mask & letters_presence) == letters_mask means all required letters are present
+        letters_compatible = (letters_mask & letters_presence) == letters_mask  # (N,)
+        
+        # Combined compatibility
+        compatible_count = np.sum(pos_compatible & letters_compatible)
+        
+        if compatible_count == 0:
+            raise ValueError(f"No compatible words for target {k}, which should not happen.")
+        
+        p_k = compatible_count / N
+        total_remaining += compatible_count
+        total_entropy += -np.log2(p_k)
+    
+    return total_entropy / N, total_remaining / N
 
+
+@njit(cache=True)
+def _evaluate_opening_entropy_numba_kernel(
+    words_array: np.ndarray,
+    hint_matrix: np.ndarray,
+    opening_indices: np.ndarray,
+    letters_presence: np.ndarray
+) -> tuple[float, float]:
+    """
+    Numba JIT-compiled kernel for evaluate_opening_entropy.
+    """
+    N = words_array.shape[0]
+    L = words_array.shape[1]
+    num_openings = len(opening_indices)
+    
+    total_entropy = 0.0
+    total_remaining = 0.0
+    
+    for k in range(N):
+        # Merge position hints from all opening words
+        pos_hint = np.zeros(L, dtype=np.uint8)
+        letters_mask = np.uint32(0)
+        
+        for oi in range(num_openings):
+            i = opening_indices[oi]
+            # Merge position hints (take max)
+            for pos in range(L):
+                if hint_matrix[i, k, pos] > pos_hint[pos]:
+                    pos_hint[pos] = hint_matrix[i, k, pos]
+            # Merge common letters into bitmask
+            for pos in range(L):
+                letter = hint_matrix[i, k, L + pos]
+                if letter > 0:
+                    letters_mask |= np.uint32(1) << np.uint32(letter - 65)  # ord('A') = 65
+        
+        # Count compatible words
+        compatible_count = 0
+        for w in range(N):
+            # Check position compatibility
+            pos_ok = True
+            for pos in range(L):
+                if pos_hint[pos] != 0 and words_array[w, pos] != pos_hint[pos]:
+                    pos_ok = False
+                    break
+            
+            if pos_ok:
+                # Check letter compatibility
+                if (letters_mask & letters_presence[w]) == letters_mask:
+                    compatible_count += 1
+        
+        p_k = compatible_count / N
+        total_remaining += compatible_count
+        total_entropy += -np.log2(p_k)
+    
+    return total_entropy / N, total_remaining / N
+
+
+def evaluate_opening_entropy_numba(words_array: np.ndarray, hint_matrix: np.ndarray, opening_words_indices: list[int]):
+    """
+    Numba-accelerated version of evaluate_opening_entropy.
+    
+    Uses JIT compilation for the inner loops.
+    """
+    N, L = words_array.shape
+    
+    if len(opening_words_indices) == 0:
+        return 0.0, float(N)
+    
+    # Precompute letter presence bitmask for each word
+    # Must convert to int32 first to avoid uint8 overflow on shift
+    letters_presence = np.zeros(N, dtype=np.uint32)
+    for pos in range(L):
+        shift_amounts = words_array[:, pos].astype(np.int32) - ord('A')
+        letters_presence |= ((np.uint32(1) << shift_amounts)).astype(np.uint32)
+    
+    opening_indices = np.array(opening_words_indices, dtype=np.int64)
+    
+    return _evaluate_opening_entropy_numba_kernel(
+        words_array, hint_matrix, opening_indices, letters_presence
+    )
+
+
+@njit(parallel=True, cache=True)
+def _evaluate_opening_entropy_numba_parallel_kernel(
+    words_array: np.ndarray,
+    hint_matrix: np.ndarray,
+    opening_indices: np.ndarray,
+    letters_presence: np.ndarray,
+    results: np.ndarray  # (N, 2) array to store entropy and count per target
+):
+    """
+    Parallel Numba kernel for evaluate_opening_entropy.
+    """
+    N = words_array.shape[0]
+    L = words_array.shape[1]
+    num_openings = len(opening_indices)
+    
+    for k in prange(N):
+        # Merge position hints from all opening words
+        pos_hint = np.zeros(L, dtype=np.uint8)
+        letters_mask = np.uint32(0)
+        
+        for oi in range(num_openings):
+            i = opening_indices[oi]
+            for pos in range(L):
+                if hint_matrix[i, k, pos] > pos_hint[pos]:
+                    pos_hint[pos] = hint_matrix[i, k, pos]
+            for pos in range(L):
+                letter = hint_matrix[i, k, L + pos]
+                if letter > 0:
+                    letters_mask |= np.uint32(1) << np.uint32(letter - 65)
+        
+        # Count compatible words
+        compatible_count = 0
+        for w in range(N):
+            pos_ok = True
+            for pos in range(L):
+                if pos_hint[pos] != 0 and words_array[w, pos] != pos_hint[pos]:
+                    pos_ok = False
+                    break
+            
+            if pos_ok:
+                if (letters_mask & letters_presence[w]) == letters_mask:
+                    compatible_count += 1
+        
+        p_k = compatible_count / N
+        results[k, 0] = -np.log2(p_k)
+        results[k, 1] = compatible_count
+
+
+def evaluate_opening_entropy_numba_parallel(words_array: np.ndarray, hint_matrix: np.ndarray, opening_words_indices: list[int]):
+    """
+    Parallel Numba-accelerated version of evaluate_opening_entropy.
+    
+    Uses multiple CPU cores for maximum performance.
+    """
+    N, L = words_array.shape
+    
+    if len(opening_words_indices) == 0:
+        return 0.0, float(N)
+    
+    # Precompute letter presence bitmask for each word
+    # Must convert to int32 first to avoid uint8 overflow on shift
+    letters_presence = np.zeros(N, dtype=np.uint32)
+    for pos in range(L):
+        shift_amounts = words_array[:, pos].astype(np.int32) - ord('A')
+        letters_presence |= ((np.uint32(1) << shift_amounts)).astype(np.uint32)
+    
+    opening_indices = np.array(opening_words_indices, dtype=np.int64)
+    results = np.zeros((N, 2), dtype=np.float64)
+    
+    _evaluate_opening_entropy_numba_parallel_kernel(
+        words_array, hint_matrix, opening_indices, letters_presence, results
+    )
+    
+    total_entropy = np.sum(results[:, 0])
+    total_remaining = np.sum(results[:, 1])
+    
+    return total_entropy / N, total_remaining / N
+
+
+def compute_word_match_with_hints_matrix(words_list: list[str]):
     words_list = [w.upper() for w in words_list]
     # convert words_list to numpy array of shape (N, L) and dtype uint8
     words_array = np.array([list(word.encode('utf-8')) for word in words_list], dtype=np.uint8)

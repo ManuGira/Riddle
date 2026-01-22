@@ -24,8 +24,13 @@ if numba_cache.exists():
 
 from riddle import DATA_FOLDER_PATH
 from wordle.wordle_openings_2 import (
-    NUMBA_AVAILABLE, compute_cross_hints_matrix_numba_parallel,
-    evaluate_opening_entropy)
+    NUMBA_AVAILABLE,
+    compute_cross_hints_matrix_numba_parallel,
+    evaluate_opening_entropy,
+    evaluate_opening_entropy_optimized,
+    evaluate_opening_entropy_numba,
+    evaluate_opening_entropy_numba_parallel,
+)
 
 
 def load_words_and_hints(n_words: int) -> tuple[list[str], np.ndarray, np.ndarray]:
@@ -53,121 +58,124 @@ def load_words_and_hints(n_words: int) -> tuple[list[str], np.ndarray, np.ndarra
     return words_list, words_array, hint_matrix
 
 
-def benchmark_evaluate_opening_entropy(
+def benchmark_single_implementation(
+    func,
     words_array: np.ndarray,
     hint_matrix: np.ndarray,
-    n_opening_words: int,
-    n_runs: int = 5
+    opening_indices: list[int],
+    n_runs: int = 3
 ) -> dict:
-    """
-    Benchmark evaluate_opening_entropy with different numbers of opening words.
+    """Benchmark a single implementation."""
+    times = []
+    entropy = None
+    remaining = None
     
-    Args:
-        words_array: Array of words
-        hint_matrix: Precomputed hint matrix
-        n_opening_words: Number of opening words to test
-        n_runs: Number of runs for averaging
-    
-    Returns:
-        Dictionary with timing statistics
-    """
-    N = words_array.shape[0]
-    np.random.seed(42)
-    
-    timings = []
-    
-    for run in range(n_runs):
-        # Select random opening words
-        opening_indices = np.random.choice(N, n_opening_words, replace=False).tolist()
-        
+    for _ in range(n_runs):
         start = time.time()
-        entropy, remaining = evaluate_opening_entropy(
-            words_array, hint_matrix, opening_indices
-        )
+        entropy, remaining = func(words_array, hint_matrix, opening_indices)
         elapsed = time.time() - start
-        
-        timings.append({
-            'run': run + 1,
-            'time': elapsed,
-            'entropy': entropy,
-            'remaining': remaining,
-        })
+        times.append(elapsed)
     
-    times = [t['time'] for t in timings]
     return {
-        'n_words': N,
-        'n_opening_words': n_opening_words,
-        'n_runs': n_runs,
         'avg_time': np.mean(times),
         'std_time': np.std(times),
-        'min_time': np.min(times),
-        'max_time': np.max(times),
-        'avg_entropy': np.mean([t['entropy'] for t in timings]),
-        'avg_remaining': np.mean([t['remaining'] for t in timings]),
-        'timings': timings,
+        'entropy': entropy,
+        'remaining': remaining,
     }
 
 
-def run_comprehensive_benchmark():
-    """Run comprehensive benchmarks with different word list sizes."""
+def run_implementation_comparison():
+    """Compare all implementations of evaluate_opening_entropy."""
     print("=" * 80)
-    print("EVALUATE_OPENING_ENTROPY BENCHMARK")
+    print("EVALUATE_OPENING_ENTROPY IMPLEMENTATION COMPARISON")
     print("=" * 80)
     print()
     
-    # Test configurations: (n_words, opening_words_list)
-    configurations = [
-        (50, [1, 2, 3, 4]),
-        (100, [1, 2, 3, 4]),
-        (200, [1, 2, 4]),
-        (500, [1, 2, 4]),
+    # Implementations to test
+    implementations = [
+        ("original", evaluate_opening_entropy),
+        ("optimized", evaluate_opening_entropy_optimized),
     ]
     
-    all_results = []
+    if NUMBA_AVAILABLE:
+        implementations.extend([
+            ("numba", evaluate_opening_entropy_numba),
+            ("numba_parallel", evaluate_opening_entropy_numba_parallel),
+        ])
     
-    for n_words, opening_counts in configurations:
+    # Test configurations: (n_words, n_opening_words)
+    configurations = [
+        (50, 2),
+        (100, 2),
+        (200, 3),
+        (500, 4),
+    ]
+    
+    for n_words, n_opening in configurations:
         print(f"\n{'─' * 80}")
-        print(f"Testing with {n_words} words")
+        print(f"N={n_words} words, {n_opening} opening words")
         print(f"{'─' * 80}")
         
         # Load words and precompute hint matrix
-        print(f"Loading {n_words} words and precomputing hint matrix...")
         words_list, words_array, hint_matrix = load_words_and_hints(n_words)
-        print(f"  Words shape: {words_array.shape}, Hint matrix shape: {hint_matrix.shape}")
         
-        # Benchmark evaluate_opening_entropy
-        print(f"\nBenchmarking evaluate_opening_entropy:")
-        print(f"   {'Opening Words':<15} {'Avg Time':<12} {'Std':<10} {'Avg Entropy':<12} {'Avg Remaining'}")
-        print(f"   {'-' * 70}")
+        # Use fixed opening words (first n_opening words)
+        opening_indices = list(range(n_opening))
         
-        for n_opening in opening_counts:
-            if n_opening >= n_words:
-                continue
-            
-            results = benchmark_evaluate_opening_entropy(
-                words_array, hint_matrix, n_opening, n_runs=5
-            )
-            
-            print(f"   {n_opening:<15} "
-                  f"{results['avg_time']*1000:>8.2f} ms   "
-                  f"{results['std_time']*1000:>6.2f} ms  "
-                  f"{results['avg_entropy']:>8.2f}     "
-                  f"{results['avg_remaining']:>8.2f}")
-            
-            all_results.append(results)
+        # Warm up Numba if available
+        if NUMBA_AVAILABLE:
+            _ = evaluate_opening_entropy_numba(words_array, hint_matrix, opening_indices)
+            _ = evaluate_opening_entropy_numba_parallel(words_array, hint_matrix, opening_indices)
+        
+        print(f"\n{'Implementation':<20} {'Avg Time':<14} {'Speedup':<10} {'Entropy':<12} {'Remaining'}")
+        print(f"{'-' * 70}")
+        
+        baseline_time = None
+        results = {}
+        
+        for name, func in implementations:
+            try:
+                result = benchmark_single_implementation(
+                    func, words_array, hint_matrix, opening_indices, n_runs=3
+                )
+                results[name] = result
+                
+                if baseline_time is None:
+                    baseline_time = result['avg_time']
+                
+                speedup = baseline_time / result['avg_time']
+                print(f"{name:<20} {result['avg_time']*1000:>8.2f} ms    "
+                      f"{speedup:>6.1f}x    "
+                      f"{result['entropy']:>8.2f}    "
+                      f"{result['remaining']:>8.2f}")
+            except Exception as e:
+                print(f"{name:<20} FAILED: {e}")
+        
+        # Verify correctness: all implementations should give same results
+        if len(results) > 1:
+            ref_entropy = results.get("original", results.get("optimized", {})).get("entropy")
+            ref_remaining = results.get("original", results.get("optimized", {})).get("remaining")
+            all_match = True
+            for name, result in results.items():
+                if not np.isclose(result['entropy'], ref_entropy, rtol=1e-5):
+                    print(f"  ⚠ {name} entropy mismatch: {result['entropy']} vs {ref_entropy}")
+                    all_match = False
+                if not np.isclose(result['remaining'], ref_remaining, rtol=1e-5):
+                    print(f"  ⚠ {name} remaining mismatch: {result['remaining']} vs {ref_remaining}")
+                    all_match = False
+            if all_match:
+                print(f"  ✓ All implementations produce matching results")
     
     print()
     print("=" * 80)
-    print("BENCHMARK COMPLETE")
+    print("COMPARISON COMPLETE")
     print("=" * 80)
-    
-    return all_results
 
 
 def benchmark_with_real_words():
     """Benchmark using full real English word list with common opening combinations."""
     print("\n" + "=" * 80)
-    print("BENCHMARK WITH FULL WORD LIST")
+    print("BENCHMARK WITH FULL WORD LIST (FASTEST IMPLEMENTATION)")
     print("=" * 80)
     
     words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"
@@ -188,7 +196,7 @@ def benchmark_with_real_words():
         dtype=np.uint8
     )
     
-    # Precompute hint matrix (not benchmarked here)
+    # Precompute hint matrix
     method = compute_cross_hints_matrix_numba_parallel if NUMBA_AVAILABLE else None
     if method is None:
         from wordle.wordle_openings_2 import compute_cross_hints_matrix_fast
@@ -197,8 +205,22 @@ def benchmark_with_real_words():
     hint_matrix = method(words_array)
     print(f"  Hint matrix size: {hint_matrix.nbytes / (1024**2):.2f} MB")
     
+    # Choose fastest implementation
+    if NUMBA_AVAILABLE:
+        fastest_func = evaluate_opening_entropy_numba_parallel
+        fastest_name = "numba_parallel"
+    else:
+        fastest_func = evaluate_opening_entropy_optimized
+        fastest_name = "optimized"
+    
+    print(f"  Using: {fastest_name}")
+    
+    # Warm up Numba
+    if NUMBA_AVAILABLE:
+        _ = fastest_func(words_array, hint_matrix, [0, 1])
+    
     # Benchmark with common opening words
-    print(f"\nBenchmarking evaluate_opening_entropy with common openings:")
+    print(f"\nBenchmarking {fastest_name} with common openings:")
     common_openings = [
         (["CRANE"], "Single: CRANE"),
         (["SLATE"], "Single: SLATE"),
@@ -215,7 +237,7 @@ def benchmark_with_real_words():
             opening_indices = [words_list.index(w.upper()) for w in opening_words]
             
             start = time.time()
-            entropy, remaining = evaluate_opening_entropy(
+            entropy, remaining = fastest_func(
                 words_array, hint_matrix, opening_indices
             )
             elapsed = time.time() - start
@@ -232,10 +254,10 @@ def main():
     """Run all benchmarks."""
     print(f"\nStarting benchmark at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
     
-    # Run synthetic benchmarks
-    run_comprehensive_benchmark()
+    # Run implementation comparison (main benchmark)
+    run_implementation_comparison()
     
-    # Run real word benchmarks
+    # Run real word benchmarks with fastest implementation
     try:
         benchmark_with_real_words()
     except Exception as e:
