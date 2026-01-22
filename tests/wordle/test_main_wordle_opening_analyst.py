@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 import pandas as pd
 from riddle import Language
-from wordle.main_wordle_opening import (
+from wordle.main_wordle_opening_analyst import (
     find_best_opening,
     initialize_csv_file,
     load_existing_solutions,

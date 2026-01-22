@@ -23,7 +23,7 @@ if numba_cache.exists():
             pass
 
 from riddle import DATA_FOLDER_PATH
-from wordle.wordle_openings_2 import (
+from wordle.main_wordle_openings_frequentist import (
     NUMBA_AVAILABLE,
     compute_cross_hints_matrix_numba_parallel,
     evaluate_opening_entropy,
@@ -50,7 +50,7 @@ def load_words_and_hints(n_words: int) -> tuple[list[str], np.ndarray, np.ndarra
     # Precompute hint matrix (using fastest method available)
     method = compute_cross_hints_matrix_numba_parallel if NUMBA_AVAILABLE else None
     if method is None:
-        from wordle.wordle_openings_2 import compute_cross_hints_matrix_fast
+        from wordle.main_wordle_openings_frequentist import compute_cross_hints_matrix_fast
         method = compute_cross_hints_matrix_fast
     
     hint_matrix = method(words_array)
@@ -199,7 +199,7 @@ def benchmark_with_real_words():
     # Precompute hint matrix
     method = compute_cross_hints_matrix_numba_parallel if NUMBA_AVAILABLE else None
     if method is None:
-        from wordle.wordle_openings_2 import compute_cross_hints_matrix_fast
+        from wordle.main_wordle_openings_frequentist import compute_cross_hints_matrix_fast
         method = compute_cross_hints_matrix_fast
     
     hint_matrix = method(words_array)

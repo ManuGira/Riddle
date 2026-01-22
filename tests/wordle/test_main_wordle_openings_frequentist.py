@@ -1,10 +1,10 @@
 """
-Unit tests for wordle_openings_2 module.
+Unit tests for main_wordle_openings_frequentist module.
 """
 import numpy as np
 import pytest
 
-from wordle.wordle_openings_2 import (
+from wordle.main_wordle_openings_frequentist import (
     compute_cross_hints_matrix,
     compute_cross_hints_matrix_optimized,
     compute_cross_hints_matrix_fast,
@@ -538,7 +538,7 @@ class TestEvaluateOpeningEntropy:
         words_array = words_to_array(words_list)
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         opening_indices = [0]  # "APPLE"
         
         entropy, remaining = evaluate_opening_entropy(
@@ -557,7 +557,7 @@ class TestEvaluateOpeningEntropy:
         words_array = words_to_array(words_list)
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         opening_indices = [0, 2]  # "APPLE", "AMPLE"
         
         entropy, remaining = evaluate_opening_entropy(
@@ -573,7 +573,7 @@ class TestEvaluateOpeningEntropy:
         words_array = words_to_array(words_list)
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         
         # Single opening word
         entropy_1, _ = evaluate_opening_entropy(
@@ -594,7 +594,7 @@ class TestEvaluateOpeningEntropy:
         words_array = words_to_array(words_list)
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         
         entropy_1, remaining_1 = evaluate_opening_entropy(
             words_array, hint_matrix, [0, 2, 3]
@@ -614,7 +614,7 @@ class TestEvaluateOpeningEntropy:
         words_array = words_to_array(words_list)
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         
         entropy, remaining = evaluate_opening_entropy(
             words_array, hint_matrix, []
@@ -631,7 +631,7 @@ class TestEvaluateOpeningEntropy:
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         N = len(words_list)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         
         opening_indices = [0, 1]
         entropy, _ = evaluate_opening_entropy(
@@ -649,7 +649,7 @@ class TestEvaluateOpeningEntropy:
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         N = len(words_list)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         
         opening_indices = [0, 1, 2]
         _, remaining = evaluate_opening_entropy(
@@ -665,7 +665,7 @@ class TestEvaluateOpeningEntropy:
         words_array = words_to_array(words_list)
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         
         opening_indices = [0]
         entropy, remaining = evaluate_opening_entropy(
@@ -681,7 +681,7 @@ class TestEvaluateOpeningEntropy:
         words_array = words_to_array(words_list)
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         
         entropy, remaining = evaluate_opening_entropy(
             words_array, hint_matrix, [0, 1]
@@ -703,7 +703,7 @@ class TestEvaluateOpeningEntropy:
         words_array = words_to_array(words_list)
         hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        from wordle.main_wordle_openings_frequentist import evaluate_opening_entropy
         
         opening_indices = [0, 10, 20]
         entropy, remaining = evaluate_opening_entropy(

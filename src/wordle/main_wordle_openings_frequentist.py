@@ -535,7 +535,7 @@ def compute_word_match_with_hints_matrix(words_list: list[str]):
     for opening in opening_list:
         opening_words_indices = [words_list.index(w) for w in opening]
 
-        expected_entropy, expected_remaning_words = evaluate_opening_entropy(words_array, hint_matrix,
+        expected_entropy, expected_remaning_words = evaluate_opening_entropy_numba_parallel(words_array, hint_matrix,
                                                                              opening_words_indices)
         # expected_entropies.append((opening, expected_entropy))
         print(f"Opening: {'-'.join(opening)}, Avg remaining words: {expected_remaning_words:.2f}, entropy: {expected_entropy:.2f}")
