@@ -356,77 +356,189 @@ class TestOptimizedVersions:
         np.testing.assert_array_equal(original[:, :, :3], fast[:, :, :3])
 
 
-class TestPerformance:
-    """Performance benchmarks for comparing implementations."""
+class TestEvaluateOpeningEntropy:
+    """Unit tests for evaluate_opening_entropy function."""
     
-    @pytest.mark.parametrize("n_words", [50, 100, 500])
-    def test_benchmark_comparison(self, n_words):
-        """Benchmark all implementations on larger datasets."""
-        import time
+    def test_single_opening_word(self):
+        """Test with a single opening word."""
+        words_list = ["APPLE", "APPLY", "AMPLE", "MAPLE", "PLANE"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        # Generate random 5-letter words
-        np.random.seed(42)
-        words_array = np.random.randint(65, 91, size=(n_words, 5), dtype=np.uint8)
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        opening_indices = [0]  # "APPLE"
         
-        # Warm up Numba JIT if available (first call compiles)
-        if NUMBA_AVAILABLE:
-            _ = compute_cross_hints_matrix_numba(words_array[:5])
-            _ = compute_cross_hints_matrix_numba_parallel(words_array[:5])
+        entropy, remaining = evaluate_opening_entropy(
+            words_array, hint_matrix, opening_indices
+        )
         
-        # Benchmark original (skip for large N to save time)
-        if n_words <= 100:
-            start = time.perf_counter()
-            original = compute_cross_hints_matrix(words_array)
-            time_original = time.perf_counter() - start
-        else:
-            time_original = None
-            original = None
+        # Basic sanity checks
+        assert entropy > 0, "Entropy should be positive"
+        assert 0 < remaining <= len(words_list), "Remaining words should be in valid range"
+        assert isinstance(entropy, (float, np.floating)), "Entropy should be float"
+        assert isinstance(remaining, (float, np.floating)), "Remaining words should be float"
+    
+    def test_multiple_opening_words(self):
+        """Test with multiple opening words."""
+        words_list = ["APPLE", "APPLY", "AMPLE", "MAPLE", "PLANE"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        # Benchmark optimized
-        start = time.perf_counter()
-        optimized = compute_cross_hints_matrix_optimized(words_array)
-        time_optimized = time.perf_counter() - start
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        opening_indices = [0, 2]  # "APPLE", "AMPLE"
         
-        # Benchmark fast
-        start = time.perf_counter()
-        fast = compute_cross_hints_matrix_fast(words_array)
-        time_fast = time.perf_counter() - start
+        entropy, remaining = evaluate_opening_entropy(
+            words_array, hint_matrix, opening_indices
+        )
         
-        print(f"\n{n_words} words benchmark:")
-        if time_original:
-            print(f"  Original:       {time_original:.4f}s (baseline)")
-            baseline = time_original
-        else:
-            print(f"  Original:       (skipped for large N)")
-            baseline = time_fast  # Use fast as baseline for comparison
-        print(f"  Optimized:      {time_optimized:.4f}s ({baseline/time_optimized:.1f}x)")
-        print(f"  Fast:           {time_fast:.4f}s ({baseline/time_fast:.1f}x)")
+        assert entropy > 0, "Entropy should be positive"
+        assert 0 < remaining <= len(words_list), "Remaining words should be in valid range"
+    
+    def test_more_openings_increases_entropy(self):
+        """Test that more opening words increase total entropy."""
+        words_list = ["CRANE", "SLATE", "STORY", "FJORD", "WIMPY"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
         
-        # Benchmark numba versions if available
-        if NUMBA_AVAILABLE:
-            start = time.perf_counter()
-            numba_result = compute_cross_hints_matrix_numba(words_array)
-            time_numba = time.perf_counter() - start
-            
-            start = time.perf_counter()
-            numba_parallel = compute_cross_hints_matrix_numba_parallel(words_array)
-            time_numba_parallel = time.perf_counter() - start
-            
-            print(f"  Numba:          {time_numba:.4f}s ({baseline/time_numba:.1f}x)")
-            print(f"  Numba Parallel: {time_numba_parallel:.4f}s ({baseline/time_numba_parallel:.1f}x)")
-            
-            # Verify correctness
-            L = 5
-            np.testing.assert_array_equal(fast[:, :, :L], numba_result[:, :, :L])
-            np.testing.assert_array_equal(fast[:, :, :L], numba_parallel[:, :, :L])
-            
-            # Common letters sets should match
-            N = n_words
-            for i in range(min(N, 10)):
-                for j in range(min(N, 10)):
-                    fast_common = set(fast[i, j, L:]) - {0}
-                    numba_common = set(numba_result[i, j, L:]) - {0}
-                    assert fast_common == numba_common, f"Numba mismatch at ({i},{j})"
-        else:
-            print(f"  Numba:          (not installed)")
-            print(f"  Numba Parallel: (not installed)")
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        
+        # Single opening word
+        entropy_1, _ = evaluate_opening_entropy(
+            words_array, hint_matrix, [0]
+        )
+        
+        # Two opening words
+        entropy_2, _ = evaluate_opening_entropy(
+            words_array, hint_matrix, [0, 1]
+        )
+        
+        # More opening words should increase entropy
+        assert entropy_2 > entropy_1, "More opening words should increase entropy"
+    
+    def test_different_word_orders_same_result(self):
+        """Test that order of opening words doesn't matter."""
+        words_list = ["APPLE", "APPLY", "AMPLE", "MAPLE", "PLANE"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        
+        entropy_1, remaining_1 = evaluate_opening_entropy(
+            words_array, hint_matrix, [0, 2, 3]
+        )
+        
+        entropy_2, remaining_2 = evaluate_opening_entropy(
+            words_array, hint_matrix, [3, 0, 2]
+        )
+        
+        # Results should be identical regardless of order
+        assert np.isclose(entropy_1, entropy_2), "Order shouldn't affect entropy"
+        assert np.isclose(remaining_1, remaining_2), "Order shouldn't affect remaining words"
+    
+    def test_empty_opening_list(self):
+        """Test with no opening words."""
+        words_list = ["APPLE", "APPLY", "AMPLE", "MAPLE", "PLANE"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        
+        entropy, remaining = evaluate_opening_entropy(
+            words_array, hint_matrix, []
+        )
+        
+        # With no hints, all words should remain and entropy should be 0 (no information gained)
+        assert np.isclose(remaining, len(words_list)), "All words should remain with no opening"
+        assert entropy == 0.0, "Entropy should be 0 with no opening words"
+    
+    def test_entropy_bounds(self):
+        """Test that entropy is within reasonable bounds."""
+        words_list = ["CRANE", "SLATE", "STORY", "FJORD", "WIMPY"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        N = len(words_list)
+        
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        
+        opening_indices = [0, 1]
+        entropy, _ = evaluate_opening_entropy(
+            words_array, hint_matrix, opening_indices
+        )
+        
+        # Entropy should be at most log2(N) per word on average (with some margin)
+        max_entropy = np.log2(N)
+        assert 0 < entropy <= max_entropy * 1.5, f"Entropy {entropy} should be reasonable"
+    
+    def test_remaining_words_bounds(self):
+        """Test that remaining words are within bounds."""
+        words_list = ["CRANE", "SLATE", "STORY", "FJORD", "WIMPY"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        N = len(words_list)
+        
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        
+        opening_indices = [0, 1, 2]
+        _, remaining = evaluate_opening_entropy(
+            words_array, hint_matrix, opening_indices
+        )
+        
+        # Remaining words should be between 1 and N
+        assert 1 <= remaining <= N, f"Remaining words {remaining} should be in [1, {N}]"
+    
+    def test_with_identical_words(self):
+        """Test behavior with some identical words."""
+        words_list = ["APPLE", "APPLE", "BREAD"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        
+        opening_indices = [0]
+        entropy, remaining = evaluate_opening_entropy(
+            words_array, hint_matrix, opening_indices
+        )
+        
+        assert entropy > 0, "Should handle identical words"
+        assert remaining > 0, "Should have remaining words"
+    
+    def test_output_no_nan_or_inf(self):
+        """Test that outputs are valid numbers (not NaN or inf)."""
+        words_list = ["APPLE", "APPLY", "AMPLE", "MAPLE", "PLANE"]
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        
+        entropy, remaining = evaluate_opening_entropy(
+            words_array, hint_matrix, [0, 1]
+        )
+        
+        assert not np.isnan(entropy), "Entropy should not be NaN"
+        assert not np.isnan(remaining), "Remaining should not be NaN"
+        assert not np.isinf(entropy), "Entropy should not be infinite"
+        assert not np.isinf(remaining), "Remaining should not be infinite"
+    
+    def test_medium_word_list(self):
+        """Test with a larger word list."""
+        # Load 50 real words from the word list
+        from riddle import DATA_FOLDER_PATH
+        words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"
+        with open(words_file, encoding="utf-8") as f:
+            words_list = [w.strip().upper() for w in f if w.strip()][:50]
+        
+        words_array = words_to_array(words_list)
+        hint_matrix = compute_cross_hints_matrix_fast(words_array)
+        
+        from wordle.wordle_openings_2 import evaluate_opening_entropy
+        
+        opening_indices = [0, 10, 20]
+        entropy, remaining = evaluate_opening_entropy(
+            words_array, hint_matrix, opening_indices
+        )
+        
+        assert entropy > 0, "Entropy should be positive"
+        assert 0 < remaining <= len(words_list), "Remaining words in valid range"
+        
+        # With 50 words and 3 opening words, should narrow down significantly
+        assert remaining < len(words_list), "Should reduce word space"
