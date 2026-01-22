@@ -399,8 +399,9 @@ def find_best_opening(language: Language, length: int, N: int, top_k: int = 1):
     find_best_word_combination(df_words, N, letters, positional_entropy_maps, top_k, csv_path)
 
 
-
-if __name__ == "__main__":
+def main():
+    find_best_opening(Language.EN, 5, 4, 1000)
+    return
 
     parser = argparse.ArgumentParser(
         description="Find the best opening words for Wordle-like games using letter frequency analysis."
