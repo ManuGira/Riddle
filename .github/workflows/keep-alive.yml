@@ -1,0 +1,12 @@
+name: Keep Render Server Alive
+on:
+  schedule:
+    - cron: '*/14 * * * *'  # Every 14 minutes
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render server
+        run: curl https://riddle-h35x.onrender.com
