@@ -9,4 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render server
-        run: curl https://riddle-h35x.onrender.com
+        run: |
+          echo "Pinging server at $(date)"
+          curl https://riddle-h35x.onrender.com
