@@ -147,19 +147,15 @@ class WordleGame {
         const maxAttempts = this.gameInfo?.max_attempts || 6;
         const wordLength = this.gameInfo?.word_length || 5;
         
-        // Adjust tile size for longer words
         const root = document.documentElement;
-        if (wordLength > 7) {
-            root.style.setProperty('--tile-size', '50px');
-            root.style.setProperty('--gap', '4px');
-        } else if (wordLength > 5) {
-            root.style.setProperty('--tile-size', '56px');
-            root.style.setProperty('--gap', '4px');
-        } else {
-            root.style.setProperty('--tile-size', '62px');
-            root.style.setProperty('--gap', '5px');
-        }
         
+        // Use maximum tile size (62px) and gap (5px) - this defines the "max zoom"
+        const maxTileSize = 62;
+        const gap = 5;
+        root.style.setProperty('--tile-size', `${maxTileSize}px`);
+        root.style.setProperty('--gap', `${gap}px`);
+        
+        // Create the board rows and tiles
         for (let i = 0; i < maxAttempts; i++) {
             const row = document.createElement('div');
             row.className = 'board-row';
@@ -174,6 +170,43 @@ class WordleGame {
             
             this.board.appendChild(row);
         }
+        
+        // Calculate and apply responsive scale
+        this.updateBoardScale();
+        
+        // Re-calculate scale on window resize
+        window.addEventListener('resize', () => this.updateBoardScale());
+    }
+    
+    updateBoardScale() {
+        const wordLength = this.gameInfo?.word_length || 5;
+        const maxAttempts = this.gameInfo?.max_attempts || 6;
+        const root = document.documentElement;
+        
+        // Get the current tile size and gap from CSS
+        const tileSize = parseFloat(getComputedStyle(root).getPropertyValue('--tile-size')) || 62;
+        const gap = parseFloat(getComputedStyle(root).getPropertyValue('--gap')) || 5;
+        
+        // Calculate the natural grid dimensions (without scaling)
+        const naturalGridWidth = (tileSize * wordLength) + (gap * (wordLength - 1));
+        const naturalGridHeight = (tileSize * maxAttempts) + (gap * (maxAttempts - 1));
+        
+        // Get the container width (with some padding for margins)
+        const container = this.board.parentElement;
+        const containerWidth = container ? container.clientWidth - 32 : window.innerWidth - 32;
+        
+        // Calculate the scale needed to fit the grid in the container
+        // Scale should be at most 1 (no zoom beyond natural size)
+        const scale = Math.min(1, containerWidth / naturalGridWidth);
+        
+        // Apply the scale to the board
+        root.style.setProperty('--board-scale', scale.toString());
+        
+        // Adjust board margin to account for scaled height difference
+        // This prevents the large gap when the board is scaled down
+        const scaledHeight = naturalGridHeight * scale;
+        const heightDiff = naturalGridHeight - scaledHeight;
+        this.board.style.marginBottom = `${20 - heightDiff}px`;
     }
     
     createKeyboard() {

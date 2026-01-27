@@ -1,3 +1,37 @@
+/* CSS Variables */
+:root {
+    --tile-size: 62px;
+    --gap: 5px;
+    --board-scale: 1;
+    --color-correct: #6aaa64;
+    --color-present: #c9b458;
+    --color-absent: #787c7e;
+    --color-border: #d3d6da;
+    --color-border-filled: #878a8c;
+}
+
+/* Reset */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+    background-color: #fff;
+}
+
+/* Container */
+.container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 /* On desktop, make it look like a phone */
 @media (min-width: 601px) {
     .container {
@@ -6,5 +40,332 @@
         border-radius: 20px;
         overflow-y: auto;
         overflow-x: hidden;
+    }
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #d3d6da;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.header-left, .header-right {
+    width: 70px;
+}
+
+.title {
+    font-size: 36px;
+    font-weight: bold;
+    margin: 0;
+    text-align: center;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.icon-button:hover {
+    background-color: #f0f0f0;
+    border-radius: 4px;
+}
+
+/* Game Info */
+.game-info {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+/* Message */
+.message {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    min-height: 24px;
+    margin-bottom: 10px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.message.show {
+    opacity: 1;
+}
+
+.message.success {
+    color: var(--color-correct);
+}
+
+.message.error {
+    color: #d32f2f;
+}
+
+.message.warning {
+    color: var(--color-present);
+}
+
+.message.info {
+    color: #333;
+}
+
+/* Game Board */
+.board {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--gap);
+    margin-bottom: 20px;
+    transform: scale(var(--board-scale));
+    transform-origin: top center;
+}
+
+.board-row {
+    display: flex;
+    gap: var(--gap);
+}
+
+/* Tile */
+.tile {
+    width: var(--tile-size);
+    height: var(--tile-size);
+    border: 2px solid var(--color-border);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: calc(var(--tile-size) * 0.5);
+    font-weight: bold;
+    text-transform: uppercase;
+    user-select: none;
+    transition: transform 0.1s;
+}
+
+.tile.filled {
+    border-color: var(--color-border-filled);
+    animation: pop 0.1s;
+}
+
+.tile.correct {
+    background-color: var(--color-correct);
+    border-color: var(--color-correct);
+    color: white;
+}
+
+.tile.present {
+    background-color: var(--color-present);
+    border-color: var(--color-present);
+    color: white;
+}
+
+.tile.absent {
+    background-color: var(--color-absent);
+    border-color: var(--color-absent);
+    color: white;
+}
+
+.tile.flip {
+    animation: flip 0.5s ease-in-out;
+}
+
+@keyframes pop {
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+@keyframes flip {
+    0% {
+        transform: rotateX(0);
+    }
+    50% {
+        transform: rotateX(90deg);
+    }
+    100% {
+        transform: rotateX(0);
+    }
+}
+
+/* Input Section */
+.input-section {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+#guess-input {
+    padding: 12px 16px;
+    font-size: 18px;
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    text-transform: uppercase;
+    width: 200px;
+    text-align: center;
+}
+
+#guess-input:focus {
+    outline: none;
+    border-color: #333;
+}
+
+.submit-button {
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.submit-button:hover {
+    background-color: #444;
+}
+
+.submit-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Keyboard */
+.keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.keyboard-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+}
+
+.key {
+    min-width: 43px;
+    height: 58px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 4px;
+    background-color: #d3d6da;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.1s;
+}
+
+.key:hover {
+    background-color: #c0c3c6;
+}
+
+.key.key-large {
+    min-width: 65px;
+    font-size: 12px;
+}
+
+.key.correct {
+    background-color: var(--color-correct);
+    color: white;
+}
+
+.key.present {
+    background-color: var(--color-present);
+    color: white;
+}
+
+.key.absent {
+    background-color: var(--color-absent);
+    color: white;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 24px;
+    border-radius: 8px;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-content .close {
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.modal-content .close:hover {
+    color: #666;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+}
+
+.examples .example-row {
+    display: flex;
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.examples .tile {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+}
+
+/* Shake animation */
+.shake {
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    20%, 60% {
+        transform: translateX(-5px);
+    }
+    40%, 80% {
+        transform: translateX(5px);
+    }
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 400px) {
+    .key {
+        min-width: 32px;
+        height: 50px;
+        padding: 0 8px;
+        font-size: 12px;
+    }
+    
+    .key.key-large {
+        min-width: 50px;
+        font-size: 10px;
     }
 }
