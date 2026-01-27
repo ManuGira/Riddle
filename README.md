@@ -16,6 +16,13 @@ uv pip install -e .
 
 This installs the `riddle` module, making it available to all scripts in the project.
 
+## PR Previews
+
+Pull requests are automatically deployed to GitHub Pages for easy testing:
+- Preview URL: `https://manugira.github.io/Riddle/pr-{PR_NUMBER}/`
+- Previews update automatically with new commits
+- Previews are cleaned up when PRs are closed
+
 ## Best Opening Words
 
 ### French
