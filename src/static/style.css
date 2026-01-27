@@ -26,21 +26,35 @@
 
 body {
     font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--color-bg);
+    background-color: #f5f5f5; /* Slightly gray background for desktop */
     color: var(--color-text);
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    padding: 10px;
+    padding: 0;
 }
 
 .container {
     max-width: 500px;
     width: 100%;
+    min-height: 100vh;
+    background-color: var(--color-bg);
     display: flex;
     flex-direction: column;
     gap: 20px;
+    padding: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); /* Subtle shadow for desktop */
+}
+
+/* On desktop, make it look like a phone */
+@media (min-width: 601px) {
+    .container {
+        min-height: 90vh;
+        max-height: 95vh;
+        border-radius: 20px;
+        overflow: hidden;
+    }
 }
 
 /* Header */
@@ -274,6 +288,7 @@ body {
     margin: 0 auto;
     max-width: 500px;
     width: 100%;
+    touch-action: manipulation; /* Prevent double-tap zoom */
 }
 
 .keyboard-row {
@@ -298,6 +313,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    touch-action: manipulation; /* Prevent double-tap zoom */
+    user-select: none; /* Prevent text selection on tap */
+    -webkit-tap-highlight-color: transparent; /* Remove iOS tap highlight */
 }
 
 .key:hover {
