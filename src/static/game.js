@@ -12,10 +12,11 @@ class WordleGame {
         this.gameInfo = null;
         this.isSubmitting = false;
         
+        // Current guess stored as string (replaces input element)
+        this.currentGuess = '';
+        
         // DOM Elements
         this.board = document.getElementById('game-board');
-        this.input = document.getElementById('guess-input');
-        this.submitButton = document.getElementById('submit-button');
         this.message = document.getElementById('message');
         this.dateDisplay = document.getElementById('date-display');
         this.attemptsDisplay = document.getElementById('attempts-display');
@@ -33,6 +34,9 @@ class WordleGame {
         
         this.letterStatus = {}; // Track letter statuses for keyboard coloring
         
+        // Store bound resize handler reference for proper cleanup
+        this.resizeHandler = null;
+        
         this.init();
     }
     
@@ -42,23 +46,11 @@ class WordleGame {
     }
     
     async init() {
-        // Detect mobile device and set input readonly accordingly
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (!isMobile) {
-            // On desktop, allow typing in input field
-            this.input.removeAttribute('readonly');
-        }
-        
         // Setup event listeners
         this.setupEventListeners();
         
         // Load game info
         await this.loadGameInfo();
-        
-        // Set input maxlength based on word length
-        if (this.gameInfo?.word_length) {
-            this.input.setAttribute('maxlength', this.gameInfo.word_length);
-        }
         
         // Initialize board
         this.createBoard();
@@ -72,28 +64,9 @@ class WordleGame {
         } else {
             this.updateDisplay();
         }
-        
-        // Focus input
-        this.input.focus();
     }
     
     setupEventListeners() {
-        // Submit button
-        this.submitButton.addEventListener('click', () => this.submitGuess());
-        
-        // Enter key in input
-        this.input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.submitGuess();
-            }
-        });
-        
-        // Update tiles as user types
-        this.input.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase();
-            this.updateCurrentRowTiles(e.target.value);
-        });
-        
         // Reset button
         this.resetButton.addEventListener('click', () => this.resetGame());
         
@@ -109,23 +82,24 @@ class WordleGame {
             }
         });
         
-        // Physical keyboard support
+        // Physical keyboard support for desktop users
         document.addEventListener('keydown', (e) => {
             if (this.infoModal.style.display === 'block') return;
+            if (this.gameState?.game_over) return;
             
-            // If input field is focused, let it handle typing naturally
-            if (document.activeElement === this.input) return;
-            
-            // Only handle keyboard when input is NOT focused (for on-screen keyboard flow)
             if (e.key === 'Enter') {
+                e.preventDefault();
                 this.submitGuess();
             } else if (e.key === 'Backspace') {
-                this.input.value = this.input.value.slice(0, -1);
-                this.input.focus();
+                e.preventDefault();
+                this.currentGuess = this.currentGuess.slice(0, -1);
+                this.updateCurrentRowTiles(this.currentGuess);
             } else if (/^[a-zA-Z]$/.test(e.key)) {
-                if (this.input.value.length < 5) {
-                    this.input.value += e.key.toUpperCase();
-                    this.input.focus();
+                const wordLength = this.gameInfo?.word_length || 5;
+                if (this.currentGuess.length < wordLength) {
+                    e.preventDefault();
+                    this.currentGuess += e.key.toUpperCase();
+                    this.updateCurrentRowTiles(this.currentGuess);
                 }
             }
         });
@@ -147,19 +121,15 @@ class WordleGame {
         const maxAttempts = this.gameInfo?.max_attempts || 6;
         const wordLength = this.gameInfo?.word_length || 5;
         
-        // Adjust tile size for longer words
         const root = document.documentElement;
-        if (wordLength > 7) {
-            root.style.setProperty('--tile-size', '50px');
-            root.style.setProperty('--gap', '4px');
-        } else if (wordLength > 5) {
-            root.style.setProperty('--tile-size', '56px');
-            root.style.setProperty('--gap', '4px');
-        } else {
-            root.style.setProperty('--tile-size', '62px');
-            root.style.setProperty('--gap', '5px');
-        }
         
+        // Use maximum tile size (62px) and gap (5px) - this defines the "max zoom"
+        const maxTileSize = 62;
+        const gap = 5;
+        root.style.setProperty('--tile-size', `${maxTileSize}px`);
+        root.style.setProperty('--gap', `${gap}px`);
+        
+        // Create the board rows and tiles
         for (let i = 0; i < maxAttempts; i++) {
             const row = document.createElement('div');
             row.className = 'board-row';
@@ -174,6 +144,49 @@ class WordleGame {
             
             this.board.appendChild(row);
         }
+        
+        // Calculate and apply responsive scale
+        this.updateBoardScale();
+        
+        // Remove previous resize listener if exists to prevent memory leaks
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+        }
+        
+        // Re-calculate scale on window resize
+        this.resizeHandler = () => this.updateBoardScale();
+        window.addEventListener('resize', this.resizeHandler);
+    }
+    
+    updateBoardScale() {
+        const wordLength = this.gameInfo?.word_length || 5;
+        const maxAttempts = this.gameInfo?.max_attempts || 6;
+        const root = document.documentElement;
+        
+        // Get the current tile size and gap from CSS
+        const tileSize = parseFloat(getComputedStyle(root).getPropertyValue('--tile-size')) || 62;
+        const gap = parseFloat(getComputedStyle(root).getPropertyValue('--gap')) || 5;
+        
+        // Calculate the natural grid dimensions (without scaling)
+        const naturalGridWidth = (tileSize * wordLength) + (gap * (wordLength - 1));
+        const naturalGridHeight = (tileSize * maxAttempts) + (gap * (maxAttempts - 1));
+        
+        // Get the container width (with some padding for margins)
+        const container = this.board.parentElement;
+        const containerWidth = container ? container.clientWidth - 32 : window.innerWidth - 32;
+        
+        // Calculate the scale needed to fit the grid in the container
+        // Scale should be at most 1 (no zoom beyond natural size)
+        const scale = Math.min(1, containerWidth / naturalGridWidth);
+        
+        // Apply the scale to the board
+        root.style.setProperty('--board-scale', scale.toString());
+        
+        // Adjust board margin to account for scaled height difference
+        // This prevents the large gap when the board is scaled down
+        const scaledHeight = naturalGridHeight * scale;
+        const heightDiff = naturalGridHeight - scaledHeight;
+        this.board.style.marginBottom = `${20 - heightDiff}px`;
     }
     
     createKeyboard() {
@@ -214,16 +227,14 @@ class WordleGame {
         if (key === 'ENTER') {
             this.submitGuess();
         } else if (key === '⌫') {
-            this.input.value = this.input.value.slice(0, -1);
-            this.updateCurrentRowTiles(this.input.value);
+            this.currentGuess = this.currentGuess.slice(0, -1);
+            this.updateCurrentRowTiles(this.currentGuess);
         } else {
-            if (this.input.value.length < wordLength) {
-                this.input.value += key;
-                this.updateCurrentRowTiles(this.input.value);
+            if (this.currentGuess.length < wordLength) {
+                this.currentGuess += key;
+                this.updateCurrentRowTiles(this.currentGuess);
             }
         }
-        
-        this.input.focus();
     }
     
     updateCurrentRowTiles(text) {
@@ -251,24 +262,23 @@ class WordleGame {
     async submitGuess() {
         if (this.isSubmitting) return;
         
-        const guess = this.input.value.trim().toUpperCase();
+        const guess = this.currentGuess.trim().toUpperCase();
         const wordLength = this.gameInfo?.word_length || 5;
         
         // Validation
         if (guess.length !== wordLength) {
             this.showMessage(`⚠️ Word must be ${wordLength} letters!`, 'warning');
-            this.shakeInput();
+            this.shakeCurrentRow();
             return;
         }
         
         if (!/^[A-Z]+$/.test(guess)) {
             this.showMessage('⚠️ Only letters allowed!', 'warning');
-            this.shakeInput();
+            this.shakeCurrentRow();
             return;
         }
         
         this.isSubmitting = true;
-        this.submitButton.disabled = true;
         
         try {
             const response = await fetch(this.getApiUrl('/api/guess'), {
@@ -294,8 +304,8 @@ class WordleGame {
             this.saveToken(this.token);
             this.gameState = data.game_state;
             
-            // Clear input
-            this.input.value = '';
+            // Clear current guess
+            this.currentGuess = '';
             
             // Update display
             this.updateDisplay();
@@ -308,19 +318,12 @@ class WordleGame {
                 this.showMessage(data.message, messageType);
             }
             
-            // Disable input if game over
-            if (data.game_over) {
-                this.input.disabled = true;
-                this.submitButton.disabled = true;
-            }
-            
         } catch (error) {
             console.error('Error submitting guess:', error);
             this.showMessage(`❌ ${error.message}`, 'error');
-            this.shakeInput();
+            this.shakeCurrentRow();
         } finally {
             this.isSubmitting = false;
-            this.submitButton.disabled = this.gameState?.game_over || false;
         }
     }
     
@@ -349,12 +352,8 @@ class WordleGame {
             // Update display with restored state
             this.updateDisplay();
             
-            // If game is over, disable input
+            // If game is over, show appropriate message
             if (this.gameState.game_over) {
-                this.input.disabled = true;
-                this.submitButton.disabled = true;
-                
-                // Show appropriate message
                 if (this.gameState.won) {
                     this.showMessage(`🎉 Game completed! You won in ${this.gameState.attempts} attempts!`, 'success');
                 } else {
@@ -386,14 +385,11 @@ class WordleGame {
             this.saveToken(this.token);
             this.gameState = null;
             this.letterStatus = {};
+            this.currentGuess = '';
             
             // Re-initialize
             this.createBoard();
             this.createKeyboard();
-            this.input.disabled = false;
-            this.submitButton.disabled = false;
-            this.input.value = '';
-            this.input.focus();
             
             this.showMessage('🔄 Game reset! Good luck!', 'info');
             this.updateDisplay();
@@ -470,11 +466,16 @@ class WordleGame {
         }, 3000);
     }
     
-    shakeInput() {
-        this.input.classList.add('shake');
-        setTimeout(() => {
-            this.input.classList.remove('shake');
-        }, 500);
+    shakeCurrentRow() {
+        // Get current row - defaults to 0 if gameState not yet loaded
+        const currentRow = this.gameState?.attempts ?? 0;
+        const row = this.board.querySelector(`[data-row="${currentRow}"]`);
+        if (row) {
+            row.classList.add('shake');
+            setTimeout(() => {
+                row.classList.remove('shake');
+            }, 500);
+        }
     }
     
     showModal() {
