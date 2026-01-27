@@ -33,6 +33,9 @@ class WordleGame {
         
         this.letterStatus = {}; // Track letter statuses for keyboard coloring
         
+        // Store bound resize handler reference for proper cleanup
+        this.resizeHandler = null;
+        
         this.init();
     }
     
@@ -123,7 +126,8 @@ class WordleGame {
                 this.input.value = this.input.value.slice(0, -1);
                 this.input.focus();
             } else if (/^[a-zA-Z]$/.test(e.key)) {
-                if (this.input.value.length < 5) {
+                const wordLength = this.gameInfo?.word_length || 5;
+                if (this.input.value.length < wordLength) {
                     this.input.value += e.key.toUpperCase();
                     this.input.focus();
                 }
@@ -174,8 +178,14 @@ class WordleGame {
         // Calculate and apply responsive scale
         this.updateBoardScale();
         
+        // Remove previous resize listener if exists to prevent memory leaks
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+        }
+        
         // Re-calculate scale on window resize
-        window.addEventListener('resize', () => this.updateBoardScale());
+        this.resizeHandler = () => this.updateBoardScale();
+        window.addEventListener('resize', this.resizeHandler);
     }
     
     updateBoardScale() {
