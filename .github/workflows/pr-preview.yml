@@ -15,18 +15,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Prepare static preview
-        run: |
-          mkdir -p preview_deploy
-          cp src/static/demo.html preview_deploy/index.html
-          cp src/static/*.css preview_deploy/ 2>/dev/null || true
-          echo "Preview prepared for GitHub Pages (static deployment)"
-      
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./preview_deploy
+          publish_dir: ./src/static
           destination_dir: pr-${{ github.event.pull_request.number }}
           keep_files: true
           
