@@ -1,0 +1,10 @@
+/* On desktop, make it look like a phone */
+@media (min-width: 601px) {
+    .container {
+        min-height: 90vh;
+        max-height: 95vh;
+        border-radius: 20px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+}
