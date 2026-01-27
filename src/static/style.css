@@ -193,50 +193,6 @@ body {
     }
 }
 
-/* Input Section */
-.input-section {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-#guess-input {
-    padding: 12px 16px;
-    font-size: 18px;
-    border: 2px solid var(--color-border);
-    border-radius: 8px;
-    text-transform: uppercase;
-    width: 200px;
-    text-align: center;
-}
-
-#guess-input:focus {
-    outline: none;
-    border-color: #333;
-}
-
-.submit-button {
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: bold;
-    background-color: #333;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.submit-button:hover {
-    background-color: #444;
-}
-
-.submit-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
 /* Keyboard */
 .keyboard {
     display: flex;
