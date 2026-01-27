@@ -138,6 +138,20 @@ class GameServer:
                 content=f"<h1>Available Games</h1><ul>{games_list}</ul>"
             )
         
+        # Preview endpoint for mobile mockup
+        @self.app.get("/preview")
+        async def preview():
+            """Serve the mobile preview page."""
+            html_file = STATIC_FOLDER_PATH / "preview.html"
+            try:
+                with open(html_file, "r", encoding="utf-8") as f:
+                    return HTMLResponse(content=f.read())
+            except FileNotFoundError:
+                return HTMLResponse(
+                    content="<h1>Preview page not found</h1><p>Please create static/preview.html</p>",
+                    status_code=404
+                )
+        
         # Create routes for each game
         for slug in self.url_to_factory_map.keys():
             self._create_game_routes(slug)
