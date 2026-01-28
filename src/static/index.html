@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wordle - Web Game</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+        // Initialize eruda console for mobile debugging
+        if (typeof eruda !== 'undefined') {
+            eruda.init();
+        } else {
+            // Fallback if eruda fails to load
+            console.log('Eruda failed to load from CDN');
+        }
+    </script>
 </head>
 <body>
     <div class="container">
