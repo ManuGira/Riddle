@@ -52,6 +52,13 @@ body {
     }
 }
 
+/* Header Section (contains header, game-info, and message) */
+.header-section {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 /* Header */
 .header {
     display: flex;
@@ -60,7 +67,6 @@ body {
     border-bottom: 1px solid #d3d6da;
     padding-bottom: 10px;
     margin-bottom: 10px;
-    flex-shrink: 0;
 }
 
 .header-left, .header-right {
@@ -93,8 +99,7 @@ body {
     gap: 20px;
     font-size: 14px;
     color: #666;
-    margin-bottom: 10px;
-    flex-shrink: 0;
+    margin-bottom: 8px;
 }
 
 /* Message */
@@ -103,10 +108,9 @@ body {
     font-size: 14px;
     font-weight: bold;
     min-height: 24px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     opacity: 0;
     transition: opacity 0.3s;
-    flex-shrink: 0;
 }
 
 .message.show {
@@ -212,9 +216,9 @@ body {
 .keyboard {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
-    padding-top: 10px;
+    padding-top: 8px;
 }
 
 .keyboard-row {
@@ -224,13 +228,15 @@ body {
 }
 
 .key {
-    min-width: 43px;
-    height: 58px;
-    padding: 0 12px;
+    flex: 1;
+    min-width: 0;
+    max-width: 43px;
+    height: 52px;
+    padding: 0 8px;
     border: none;
     border-radius: 4px;
     background-color: #d3d6da;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: bold;
     cursor: pointer;
     user-select: none;
@@ -242,8 +248,8 @@ body {
 }
 
 .key.key-large {
-    min-width: 65px;
-    font-size: 12px;
+    max-width: 65px;
+    font-size: 11px;
 }
 
 .key.correct {
