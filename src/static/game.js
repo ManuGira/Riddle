@@ -171,22 +171,21 @@ class WordleGame {
         const naturalGridWidth = (tileSize * wordLength) + (gap * (wordLength - 1));
         const naturalGridHeight = (tileSize * maxAttempts) + (gap * (maxAttempts - 1));
         
-        // Get the container width (with some padding for margins)
-        const container = this.board.parentElement;
-        const containerWidth = container ? container.clientWidth - 32 : window.innerWidth - 32;
+        // Get the board container dimensions
+        const boardContainer = this.board;
+        const containerWidth = boardContainer.clientWidth || window.innerWidth - 32;
+        const containerHeight = boardContainer.clientHeight || window.innerHeight;
         
-        // Calculate the scale needed to fit the grid in the container
+        // Calculate scale based on both width and height constraints
+        const scaleWidth = containerWidth / naturalGridWidth;
+        const scaleHeight = containerHeight / naturalGridHeight;
+        
+        // Use the smaller scale to ensure grid fits in both dimensions
         // Scale should be at most 1 (no zoom beyond natural size)
-        const scale = Math.min(1, containerWidth / naturalGridWidth);
+        const scale = Math.min(1, scaleWidth, scaleHeight);
         
         // Apply the scale to the board
         root.style.setProperty('--board-scale', scale.toString());
-        
-        // Adjust board margin to account for scaled height difference
-        // This prevents the large gap when the board is scaled down
-        const scaledHeight = naturalGridHeight * scale;
-        const heightDiff = naturalGridHeight - scaledHeight;
-        this.board.style.marginBottom = `${20 - heightDiff}px`;
     }
     
     createKeyboard() {
