@@ -27,7 +27,7 @@ body {
 .container {
     max-width: 500px;
     margin: 0 auto;
-    padding: 16px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -216,27 +216,29 @@ body {
 .keyboard {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     flex-shrink: 0;
     padding-top: 8px;
+    width: 100%;
 }
 
 .keyboard-row {
     display: flex;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
+    width: 100%;
 }
 
 .key {
     flex: 1;
     min-width: 0;
-    max-width: 43px;
-    height: 52px;
-    padding: 0 8px;
+    max-width: 40px;
+    height: 48px;
+    padding: 0 6px;
     border: none;
     border-radius: 4px;
     background-color: #d3d6da;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     user-select: none;
@@ -248,8 +250,8 @@ body {
 }
 
 .key.key-large {
-    max-width: 65px;
-    font-size: 11px;
+    max-width: 60px;
+    font-size: 10px;
 }
 
 .key.correct {
@@ -335,15 +337,27 @@ body {
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 400px) {
+    .container {
+        padding: 8px;
+    }
+    
+    .keyboard {
+        gap: 4px;
+    }
+    
+    .keyboard-row {
+        gap: 3px;
+    }
+    
     .key {
-        min-width: 32px;
-        height: 50px;
-        padding: 0 8px;
-        font-size: 12px;
+        max-width: 32px;
+        height: 44px;
+        padding: 0 4px;
+        font-size: 11px;
     }
     
     .key.key-large {
-        min-width: 50px;
-        font-size: 10px;
+        max-width: 52px;
+        font-size: 9px;
     }
 }
