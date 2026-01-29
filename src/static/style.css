@@ -31,6 +31,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height for mobile browsers */
     background-color: #fff;
     overflow: hidden;
 }
@@ -339,20 +340,41 @@ body {
 /* Responsive adjustments for smaller screens */
 @media (max-width: 400px) {
     .container {
-        padding: 8px;
+        padding: 6px;
+    }
+    
+    .header {
+        padding-bottom: 6px;
+        margin-bottom: 6px;
+    }
+    
+    .game-info {
+        margin-bottom: 4px;
+        font-size: 12px;
+    }
+    
+    .message {
+        margin-bottom: 4px;
+        min-height: 20px;
+        font-size: 12px;
+    }
+    
+    .board {
+        padding: 4px 0;
     }
     
     .keyboard {
-        gap: 4px;
+        gap: 3px;
+        padding-top: 4px;
     }
     
     .keyboard-row {
-        gap: 3px;
+        gap: 2px;
     }
     
     .key {
         max-width: 32px;
-        height: 44px;
+        height: 42px;
         padding: 0 4px;
         font-size: 11px;
     }
