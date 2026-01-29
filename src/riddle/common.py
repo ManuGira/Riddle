@@ -20,7 +20,9 @@ def repo_root_path() -> Path:
         # Safety: stop at filesystem root
         if repo_root == repo_root.parent:
             # Fallback: assume we're in src/riddle, so go up 2 levels
-            return Path(__file__).parent.parent.parent
+            fallback = Path(__file__).parent.parent.parent
+            print(f"⚠️  Could not find pyproject.toml, using fallback path: {fallback}", flush=True)
+            return fallback
     return repo_root
 
 REPO_ROOT_PATH: Path = repo_root_path()

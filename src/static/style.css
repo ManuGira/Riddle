@@ -19,26 +19,45 @@ body {
     margin: 0;
     padding: 0;
     font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
-    background-color: #fff;
+    background-color: #f5f5f5;
+    overflow: hidden;
 }
 
 /* Container */
 .container {
     max-width: 500px;
     margin: 0 auto;
-    padding: 16px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height for mobile browsers */
+    background-color: #fff;
+    overflow: hidden;
 }
 
 /* On desktop, make it look like a phone */
 @media (min-width: 601px) {
-    .container {
-        min-height: 90vh;
-        border-radius: 20px;
-        overflow-x: hidden;
+    body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        overflow: auto;
     }
+    
+    .container {
+        height: min(90vh, 844px);
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+}
+
+/* Header Section (contains header, game-info, and message) */
+.header-section {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Header */
@@ -81,7 +100,7 @@ body {
     gap: 20px;
     font-size: 14px;
     color: #666;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 /* Message */
@@ -90,7 +109,7 @@ body {
     font-size: 14px;
     font-weight: bold;
     min-height: 24px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     opacity: 0;
     transition: opacity 0.3s;
 }
@@ -120,10 +139,13 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: var(--gap);
-    margin-bottom: 20px;
+    flex: 1;
+    min-height: 0;
+    padding: 8px 0;
     transform: scale(var(--board-scale));
-    transform-origin: top center;
+    transform-origin: center;
 }
 
 .board-row {
@@ -195,25 +217,29 @@ body {
 .keyboard {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: auto;
-    padding-bottom: 16px;
+    gap: 5px;
+    flex-shrink: 0;
+    padding-top: 8px;
+    width: 100%;
 }
 
 .keyboard-row {
     display: flex;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
+    width: 100%;
 }
 
 .key {
-    min-width: 43px;
-    height: 58px;
-    padding: 0 12px;
+    flex: 1;
+    min-width: 0;
+    max-width: 40px;
+    height: 48px;
+    padding: 0 6px;
     border: none;
     border-radius: 4px;
     background-color: #d3d6da;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     user-select: none;
@@ -225,8 +251,8 @@ body {
 }
 
 .key.key-large {
-    min-width: 65px;
-    font-size: 12px;
+    max-width: 60px;
+    font-size: 10px;
 }
 
 .key.correct {
@@ -312,15 +338,48 @@ body {
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 400px) {
-    .key {
-        min-width: 32px;
-        height: 50px;
-        padding: 0 8px;
+    .container {
+        padding: 6px;
+    }
+    
+    .header {
+        padding-bottom: 6px;
+        margin-bottom: 6px;
+    }
+    
+    .game-info {
+        margin-bottom: 4px;
         font-size: 12px;
     }
     
+    .message {
+        margin-bottom: 4px;
+        min-height: 20px;
+        font-size: 12px;
+    }
+    
+    .board {
+        padding: 4px 0;
+    }
+    
+    .keyboard {
+        gap: 3px;
+        padding-top: 4px;
+    }
+    
+    .keyboard-row {
+        gap: 2px;
+    }
+    
+    .key {
+        max-width: 32px;
+        height: 42px;
+        padding: 0 4px;
+        font-size: 11px;
+    }
+    
     .key.key-large {
-        min-width: 50px;
-        font-size: 10px;
+        max-width: 52px;
+        font-size: 9px;
     }
 }
