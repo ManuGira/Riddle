@@ -144,7 +144,6 @@ body {
     flex: 1;
     min-height: 0;
     padding: 8px 0;
-    overflow: visible;
     transform: scale(var(--board-scale));
     transform-origin: center;
 }
