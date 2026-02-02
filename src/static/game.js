@@ -159,33 +159,10 @@ class WordleGame {
     }
     
     updateBoardScale() {
-        const wordLength = this.gameInfo?.word_length || 5;
-        const maxAttempts = this.gameInfo?.max_attempts || 6;
-        const root = document.documentElement;
-        
-        // Get the current tile size and gap from CSS
-        const tileSize = parseFloat(getComputedStyle(root).getPropertyValue('--tile-size')) || 62;
-        const gap = parseFloat(getComputedStyle(root).getPropertyValue('--gap')) || 5;
-        
-        // Calculate the natural grid dimensions (without scaling)
-        const naturalGridWidth = (tileSize * wordLength) + (gap * (wordLength - 1));
-        const naturalGridHeight = (tileSize * maxAttempts) + (gap * (maxAttempts - 1));
-        
-        // Get the board container dimensions
-        const boardContainer = this.board;
-        const containerWidth = boardContainer.clientWidth || window.innerWidth - 32;
-        const containerHeight = boardContainer.clientHeight || window.innerHeight;
-        
-        // Calculate scale based on both width and height constraints
-        const scaleWidth = containerWidth / naturalGridWidth;
-        const scaleHeight = containerHeight / naturalGridHeight;
-        
-        // Use the smaller scale to ensure grid fits in both dimensions
-        // Scale should be at most 1 (no zoom beyond natural size)
-        const scale = Math.min(1, scaleWidth, scaleHeight);
-        
-        // Apply the scale to the board
-        root.style.setProperty('--board-scale', scale.toString());
+        // No-op: Layout is now handled by CSS constraints
+        // This method is kept for compatibility but does nothing
+        // CSS uses intrinsic sizing with aspect-ratio and viewport units
+        return;
     }
     
     createKeyboard() {
