@@ -4,9 +4,12 @@
 
 /* CSS Variables */
 :root {
-    /* Tile sizing - intrinsic, not transform-based */
-    --tile-size: min(14vw, 62px);
-    --tile-gap: min(1vw, 5px);
+    /* Tile sizing - dynamically scales based on container width
+       For a 5-letter word: tiles take ~70vw / 5 = 14vw each
+       For a 25-letter word: tiles take ~70vw / 25 = 2.8vw each
+       The formula: min((container-width / word-length) - gap, max-size) */
+    --tile-size: clamp(18px, 12vw, 58px);
+    --tile-gap: clamp(2px, 0.8vw, 5px);
     
     /* Colors */
     --color-correct: #6aaa64;
@@ -189,6 +192,7 @@ body {
     
     /* Constrain to container */
     width: 100%;
+    max-width: 100%; /* Prevent horizontal overflow */
     min-height: 0; /* Allow flex shrinking */
     
     /* No transform scaling */
@@ -198,6 +202,8 @@ body {
 .board-row {
     display: flex;
     gap: var(--tile-gap);
+    max-width: 100%; /* Ensure row doesn't overflow */
+    justify-content: center;
 }
 
 /* Tile - Intrinsic Sizing */
