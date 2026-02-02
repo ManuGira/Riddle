@@ -123,11 +123,26 @@ class WordleGame {
         
         const root = document.documentElement;
         
-        // Use maximum tile size (62px) and gap (5px) - this defines the "max zoom"
-        const maxTileSize = 62;
-        const gap = 5;
-        root.style.setProperty('--tile-size', `${maxTileSize}px`);
-        root.style.setProperty('--gap', `${gap}px`);
+        // Calculate responsive tile size based on word length
+        // For narrow grids (3-7 letters): allow larger tiles
+        // For wide grids (8-25 letters): scale down proportionally
+        // Formula ensures tiles + gaps fit within container width
+        const containerWidth = window.innerWidth > 600 ? 400 : window.innerWidth;
+        const padding = window.innerWidth > 600 ? 24 : (window.innerWidth < 400 ? 12 : 24);
+        const availableWidth = containerWidth - padding;
+        
+        // Calculate max tile size that fits all tiles in a row
+        // availableWidth = (tileSize * wordLength) + (gap * (wordLength - 1))
+        // Solve for tileSize given a gap proportion
+        const gapRatio = 0.08; // gap is ~8% of tile size
+        const maxTileSize = availableWidth / (wordLength + (wordLength - 1) * gapRatio);
+        
+        // Clamp tile size between reasonable bounds
+        const tileSize = Math.max(18, Math.min(62, maxTileSize));
+        const gap = Math.max(2, Math.min(5, tileSize * gapRatio));
+        
+        root.style.setProperty('--tile-size', `${tileSize}px`);
+        root.style.setProperty('--tile-gap', `${gap}px`);
         
         // Create the board rows and tiles
         for (let i = 0; i < maxAttempts; i++) {
@@ -145,7 +160,7 @@ class WordleGame {
             this.board.appendChild(row);
         }
         
-        // Calculate and apply responsive scale
+        // No-op: CSS handles layout
         this.updateBoardScale();
         
         // Remove previous resize listener if exists to prevent memory leaks
@@ -153,8 +168,17 @@ class WordleGame {
             window.removeEventListener('resize', this.resizeHandler);
         }
         
-        // Re-calculate scale on window resize
-        this.resizeHandler = () => this.updateBoardScale();
+        // Re-calculate tile size on window resize
+        this.resizeHandler = () => {
+            const newContainerWidth = window.innerWidth > 600 ? 400 : window.innerWidth;
+            const newPadding = window.innerWidth > 600 ? 24 : (window.innerWidth < 400 ? 12 : 24);
+            const newAvailableWidth = newContainerWidth - newPadding;
+            const newMaxTileSize = newAvailableWidth / (wordLength + (wordLength - 1) * gapRatio);
+            const newTileSize = Math.max(18, Math.min(62, newMaxTileSize));
+            const newGap = Math.max(2, Math.min(5, newTileSize * gapRatio));
+            root.style.setProperty('--tile-size', `${newTileSize}px`);
+            root.style.setProperty('--tile-gap', `${newGap}px`);
+        };
         window.addEventListener('resize', this.resizeHandler);
     }
     
