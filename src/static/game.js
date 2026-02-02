@@ -123,63 +123,36 @@ class WordleGame {
         
         const root = document.documentElement;
         
-        // Calculate responsive tile size based on word length
-        // For narrow grids (3-7 letters): allow larger tiles
-        // For wide grids (8-25 letters): scale down proportionally
-        // Formula ensures tiles + gaps fit within container width
-        const containerWidth = window.innerWidth > 600 ? 400 : window.innerWidth;
-        const padding = window.innerWidth > 600 ? 24 : (window.innerWidth < 400 ? 12 : 24);
-        const availableWidth = containerWidth - padding;
+        // ONLY provide semantic data to CSS - no layout calculations
+        // CSS will handle all sizing using CSS Grid and aspect-ratio
+        root.style.setProperty('--cols', wordLength);
+        root.style.setProperty('--rows', maxAttempts);
         
-        // Calculate max tile size that fits all tiles in a row
-        // availableWidth = (tileSize * wordLength) + (gap * (wordLength - 1))
-        // Solve for tileSize given a gap proportion
-        const gapRatio = 0.08; // gap is ~8% of tile size
-        const maxTileSize = availableWidth / (wordLength + (wordLength - 1) * gapRatio);
+        // Create a grid container
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'board-grid';
         
-        // Clamp tile size between reasonable bounds
-        const tileSize = Math.max(18, Math.min(62, maxTileSize));
-        const gap = Math.max(2, Math.min(5, tileSize * gapRatio));
-        
-        root.style.setProperty('--tile-size', `${tileSize}px`);
-        root.style.setProperty('--tile-gap', `${gap}px`);
-        
-        // Create the board rows and tiles
+        // Create tiles in a flat structure for CSS Grid
         for (let i = 0; i < maxAttempts; i++) {
-            const row = document.createElement('div');
-            row.className = 'board-row';
-            row.dataset.row = i;
-            
             for (let j = 0; j < wordLength; j++) {
                 const tile = document.createElement('div');
                 tile.className = 'tile';
+                tile.dataset.row = i;
                 tile.dataset.col = j;
-                row.appendChild(tile);
+                gridContainer.appendChild(tile);
             }
-            
-            this.board.appendChild(row);
         }
         
-        // No-op: CSS handles layout
+        this.board.appendChild(gridContainer);
+        
+        // No-op: CSS handles all layout
         this.updateBoardScale();
         
-        // Remove previous resize listener if exists to prevent memory leaks
+        // Remove previous resize listener - not needed anymore
         if (this.resizeHandler) {
             window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
         }
-        
-        // Re-calculate tile size on window resize
-        this.resizeHandler = () => {
-            const newContainerWidth = window.innerWidth > 600 ? 400 : window.innerWidth;
-            const newPadding = window.innerWidth > 600 ? 24 : (window.innerWidth < 400 ? 12 : 24);
-            const newAvailableWidth = newContainerWidth - newPadding;
-            const newMaxTileSize = newAvailableWidth / (wordLength + (wordLength - 1) * gapRatio);
-            const newTileSize = Math.max(18, Math.min(62, newMaxTileSize));
-            const newGap = Math.max(2, Math.min(5, newTileSize * gapRatio));
-            root.style.setProperty('--tile-size', `${newTileSize}px`);
-            root.style.setProperty('--tile-gap', `${newGap}px`);
-        };
-        window.addEventListener('resize', this.resizeHandler);
     }
     
     updateBoardScale() {
@@ -240,11 +213,16 @@ class WordleGame {
     updateCurrentRowTiles(text) {
         // Get current row from game state, or default to 0 for new games
         const currentRow = this.gameState?.attempts || 0;
-        const row = this.board.querySelector(`[data-row="${currentRow}"]`);
-        if (!row) return;
-        
-        const tiles = row.querySelectorAll('.tile');
         const wordLength = this.gameInfo?.word_length || 5;
+        
+        // Get all tiles in the current row
+        const tiles = [];
+        for (let col = 0; col < wordLength; col++) {
+            const tile = this.board.querySelector(`.tile[data-row="${currentRow}"][data-col="${col}"]`);
+            if (tile) tiles.push(tile);
+        }
+        
+        if (tiles.length === 0) return;
         
         // Clear all tiles first
         tiles.forEach(tile => {
@@ -418,13 +396,12 @@ class WordleGame {
     }
     
     displayGuess(guessResult, rowIndex) {
-        const row = this.board.querySelector(`[data-row="${rowIndex}"]`);
-        if (!row) return;
-        
-        const tiles = row.querySelectorAll('.tile');
+        const wordLength = this.gameInfo?.word_length || 5;
         
         guessResult.hints.forEach((hint, colIndex) => {
-            const tile = tiles[colIndex];
+            const tile = this.board.querySelector(`.tile[data-row="${rowIndex}"][data-col="${colIndex}"]`);
+            if (!tile) return;
+            
             tile.textContent = hint.letter;
             tile.classList.add(hint.status);
             
@@ -469,12 +446,17 @@ class WordleGame {
     shakeCurrentRow() {
         // Get current row - defaults to 0 if gameState not yet loaded
         const currentRow = this.gameState?.attempts ?? 0;
-        const row = this.board.querySelector(`[data-row="${currentRow}"]`);
-        if (row) {
-            row.classList.add('shake');
-            setTimeout(() => {
-                row.classList.remove('shake');
-            }, 500);
+        const wordLength = this.gameInfo?.word_length || 5;
+        
+        // Shake all tiles in the current row
+        for (let col = 0; col < wordLength; col++) {
+            const tile = this.board.querySelector(`.tile[data-row="${currentRow}"][data-col="${col}"]`);
+            if (tile) {
+                tile.classList.add('shake');
+                setTimeout(() => {
+                    tile.classList.remove('shake');
+                }, 500);
+            }
         }
     }
     
