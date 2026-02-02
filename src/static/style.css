@@ -209,10 +209,9 @@ body {
     /* For 25 cols, 6 rows: aspect-ratio = 25/6 */
     aspect-ratio: calc(var(--cols) / var(--rows));
     
-    /* Fill available width */
-    width: 100%;
-    
-    /* Constrain height to fit in available vertical space */
+    /* Let CSS choose the constraining dimension */
+    /* CSS will automatically size to fit whichever is more restrictive */
+    max-width: 100%;
     max-height: 100%;
     
     /* Container queries for responsive font sizing */
