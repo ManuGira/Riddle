@@ -209,9 +209,10 @@ body {
     /* For 25 cols, 6 rows: aspect-ratio = 25/6 */
     aspect-ratio: calc(var(--cols) / var(--rows));
     
-    /* Constrain to fit in available space */
-    /* The grid will scale to fit either width or height */
-    max-width: calc(100% - clamp(12px, 3vw, 24px)); /* Account for container padding */
+    /* Fill available width */
+    width: 100%;
+    
+    /* Constrain height to fit in available vertical space */
     max-height: 100%;
     
     /* Container queries for responsive font sizing */
