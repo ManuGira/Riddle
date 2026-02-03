@@ -23,7 +23,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./src/static
-          destination_dir: pr-${{ github.event.pull_request.number }}
+          publish_branch: main
+          destination_dir: docs/pr-${{ github.event.pull_request.number }}
           keep_files: true
           
       - name: Comment preview URL
@@ -31,7 +32,7 @@ jobs:
         with:
           script: |
             const prNumber = context.issue.number;
-            const previewUrl = `https://manugira.github.io/Riddle/pr-${prNumber}/`;
+            const previewUrl = `https://manugira.github.io/Riddle/docs/pr-${prNumber}/`;
             
             // Log the preview URL to workflow logs
             console.log(`Preview URL: ${previewUrl}`);
