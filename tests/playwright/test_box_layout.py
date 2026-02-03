@@ -69,9 +69,6 @@ def test_box_computed_styles(page, box_layout_page_path):
     # Navigate to the test page
     page.goto(f"file://{box_layout_page_path}")
     
-    # Get the main test box
-    box = page.locator("#main-box")
-    
     # Use JavaScript to get computed styles
     computed_style = page.evaluate("""
         () => {
