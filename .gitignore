@@ -17,3 +17,4 @@ src/riddle.egg-info
 tests/playwright/*.png
 tests/playwright/test-results/
 .playwright/
+flexbox_test_screenshot.png
