@@ -396,8 +396,6 @@ class WordleGame {
     }
     
     displayGuess(guessResult, rowIndex) {
-        const wordLength = this.gameInfo?.word_length || 5;
-        
         guessResult.hints.forEach((hint, colIndex) => {
             const tile = this.board.querySelector(`.tile[data-row="${rowIndex}"][data-col="${colIndex}"]`);
             if (!tile) return;
