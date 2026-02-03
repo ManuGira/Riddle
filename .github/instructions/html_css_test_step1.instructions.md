@@ -5,6 +5,8 @@ This document describes the completion of Step 1: Installing and configuring Pla
 
 **Update (2026-02-03)**: Branch successfully rebased on main to incorporate test skip markers fix (commit 1f24f73). All 122 tests now pass (116 passed, 6 skipped).
 
+**Update (2026-02-03)**: Cleaned up commit history by removing duplicate commits from main branch. The PR now contains only 3 commits with the actual Playwright changes.
+
 ## What Was Added
 
 ### 1. Dependencies (pyproject.toml)
