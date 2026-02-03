@@ -10,7 +10,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import Sequence
-from pathlib import Path
 import jwt
 
 from riddle import STATIC_FOLDER_PATH, RiddleGame, GameState
