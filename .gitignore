@@ -12,3 +12,8 @@ build/
 .venv/
 venv/
 src/riddle.egg-info
+
+# Playwright test artifacts
+tests/playwright/*.png
+tests/playwright/test-results/
+.playwright/
