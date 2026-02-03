@@ -33,6 +33,10 @@ jobs:
             const prNumber = context.issue.number;
             const previewUrl = `https://manugira.github.io/Riddle/pr-${prNumber}/`;
             
+            // Log the preview URL to workflow logs
+            console.log(`Preview URL: ${previewUrl}`);
+            core.notice(`Preview deployed to: ${previewUrl}`);
+            
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
