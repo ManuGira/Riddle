@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Box Layout Test</title>
+    <style>
+        /* Reset margins and padding for predictable layout */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f5f5f5;
+        }
+
+        /* Simple box with absolute positioning for deterministic layout */
+        .test-box {
+            position: absolute;
+            top: 50px;
+            left: 100px;
+            width: 200px;
+            height: 150px;
+            background-color: #4CAF50;
+            border: 3px solid #2E7D32;
+            padding: 20px;
+        }
+
+        /* Text element inside the box */
+        .test-text {
+            color: white;
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-box" id="main-box">
+        <div class="test-text" id="text-content">Test Box Content</div>
+    </div>
+</body>
+</html>
