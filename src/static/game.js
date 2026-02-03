@@ -106,6 +106,13 @@ class WordleGame {
     }
     
     async loadGameInfo() {
+        // Check if we have a static configuration (for previews)
+        if (window.GAME_CONFIG) {
+            this.gameInfo = window.GAME_CONFIG;
+            console.log('Using static game configuration:', this.gameInfo);
+            return;
+        }
+        
         try {
             const response = await fetch(this.getApiUrl('/api/info'));
             this.gameInfo = await response.json();

@@ -31,11 +31,11 @@ jobs:
         with:
           script: |
             const prNumber = context.issue.number;
-            const previewUrl = `https://manugira.github.io/Riddle/pr-${prNumber}/`;
+            const baseUrl = `https://manugira.github.io/Riddle/pr-${prNumber}`;
             
-            // Log the preview URL to workflow logs
-            console.log(`Preview URL: ${previewUrl}`);
-            core.notice(`Preview deployed to: ${previewUrl}`);
+            // Log the preview URLs to workflow logs
+            console.log(`Preview base URL: ${baseUrl}`);
+            core.notice(`Preview deployed to: ${baseUrl}`);
             
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -48,7 +48,15 @@ jobs:
               comment.body.includes('Preview deployed')
             );
             
-            const body = `🚀 **Preview deployed!**\n\n📱 View your changes: ${previewUrl}\n\n_This preview updates automatically with new commits._`;
+            const body = `🚀 **Preview deployed!**
+
+📱 **View your changes:**
+- 🏠 [Landing Page](${baseUrl}/) - Choose your preview
+- 📱 [3-Letter Grid (6×3)](${baseUrl}/preview-3.html) - Compact layout
+- 💻 [5-Letter Grid (6×5)](${baseUrl}/preview-5.html) - Classic Wordle
+- 🖥️ [25-Letter Grid (6×25)](${baseUrl}/preview-25.html) - Wide layout
+
+_This preview updates automatically with new commits._`;
             
             if (botComment) {
               await github.rest.issues.updateComment({
