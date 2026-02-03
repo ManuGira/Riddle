@@ -1,6 +1,5 @@
 """Playwright configuration for browser testing."""
 
-from playwright.sync_api import sync_playwright
 import pytest
 
 
