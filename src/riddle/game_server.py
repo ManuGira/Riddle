@@ -57,18 +57,14 @@ class GameServer:
         self._game_cache: dict[tuple[str, str], RiddleGame] = {}
         
         # Mount static files directory
-        print(f"📁 Static files path: {STATIC_FOLDER_PATH}")
-        print(f"📁 Static files exist: {STATIC_FOLDER_PATH.exists()}")
-        if STATIC_FOLDER_PATH.exists():
-            print(f"📁 Static files contents: {list(STATIC_FOLDER_PATH.glob('*'))}")
-            self.app.mount("/static", StaticFiles(directory=str(STATIC_FOLDER_PATH)), name="static")
-        else:
-            print(f"⚠️  WARNING: Static files directory not found at {STATIC_FOLDER_PATH}")
-            print(f"⚠️  The application will not serve CSS/JS files correctly!")
-            print(f"⚠️  Current working directory: {Path.cwd()}")
-            print(f"⚠️  __file__ location: {Path(__file__).absolute()}")
-            # Don't mount static files if directory doesn't exist
-            # This will cause 404s for /static/* but won't crash the server
+        if not STATIC_FOLDER_PATH.exists():
+            raise FileNotFoundError(
+                f"Static files directory not found at {STATIC_FOLDER_PATH}. "
+                f"The application cannot serve frontend assets. "
+                f"Please ensure the directory exists or check STATIC_FOLDER_PATH configuration."
+            )
+        
+        self.app.mount("/static", StaticFiles(directory=str(STATIC_FOLDER_PATH)), name="static")
         
         self._setup_routes()
     
