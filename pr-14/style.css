@@ -1,0 +1,447 @@
+/* ==============================================
+   CONSTRAINT-BASED MOBILE-FIRST WORDLE LAYOUT
+   ============================================== */
+
+/* CSS Variables */
+:root {
+    /* Dynamic grid dimensions - set by JavaScript */
+    --cols: 5; /* Default: 5-letter words */
+    --rows: 6; /* Default: 6 attempts */
+    
+    /* Gap as percentage of available space */
+    --gap-factor: 0.015; /* 1.5% of container for gaps */
+    
+    /* Colors */
+    --color-correct: #6aaa64;
+    --color-present: #c9b458;
+    --color-absent: #787c7e;
+    --color-border: #d3d6da;
+    --color-border-filled: #878a8c;
+    
+    /* Layout proportions */
+    --header-aspect: 8 / 1;
+    --keyboard-aspect: 5 / 2;
+}
+
+/* Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Body - Mobile First */
+body {
+    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /* Use small viewport height to account for mobile browser UI */
+    height: 100svh;
+    height: 100dvh;
+}
+
+/* ==============================================
+   MAIN CONTAINER - CONSTRAINT-BASED
+   ============================================== */
+
+.container {
+    /* Full viewport on mobile */
+    width: 100%;
+    height: 100svh;
+    height: 100dvh;
+    
+    /* Flexbox column layout */
+    display: flex;
+    flex-direction: column;
+    
+    /* Styling */
+    background-color: #fff;
+    padding: clamp(6px, 2vw, 12px);
+    
+    /* No scrolling */
+    overflow: hidden;
+}
+
+/* Desktop: Phone Mockup */
+@media (min-width: 601px) {
+    body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        overflow: auto;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .container {
+        /* Fixed phone dimensions */
+        width: min(100vw - 40px, 400px);
+        height: min(90vh, 844px);
+        max-width: 400px;
+        
+        /* Phone appearance */
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        
+        /* Consistent padding */
+        padding: 12px;
+    }
+}
+
+/* ==============================================
+   HEADER SECTION - TOP ALIGNED, INTRINSIC HEIGHT
+   ============================================== */
+
+.header-section {
+    /* No flex-grow, only shrink protection */
+    flex: 0 0 auto;
+    
+    /* Full width */
+    width: 100%;
+    
+    /* Internal layout */
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, 1vw, 8px);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: clamp(6px, 1.5vw, 10px);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.header-left,
+.header-right {
+    width: clamp(50px, 15vw, 70px);
+    display: flex;
+    justify-content: center;
+}
+
+.title {
+    font-size: clamp(24px, 7vw, 36px);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: center;
+    flex: 1;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.15s;
+}
+
+.icon-button:hover {
+    background-color: #f0f0f0;
+}
+
+.icon-button svg {
+    display: block;
+    width: clamp(20px, 5vw, 24px);
+    height: clamp(20px, 5vw, 24px);
+}
+
+.game-info {
+    display: flex;
+    justify-content: center;
+    gap: clamp(12px, 4vw, 20px);
+    font-size: clamp(12px, 3vw, 14px);
+    color: #666;
+}
+
+.message {
+    text-align: center;
+    font-size: clamp(12px, 3vw, 14px);
+    font-weight: 600;
+    min-height: clamp(18px, 4vw, 24px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.message.show {
+    opacity: 1;
+}
+
+.message.success { color: var(--color-correct); }
+.message.error { color: #d32f2f; }
+.message.warning { color: var(--color-present); }
+.message.info { color: #333; }
+
+/* ==============================================
+   GAME BOARD - FILLS REMAINING SPACE
+   ============================================== */
+
+.board {
+    /* Take all available space between header and keyboard */
+    flex: 1 1 auto;
+    
+    /* Center the grid container */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Constrain to parent */
+    width: 100%;
+    min-height: 0; /* Allow flex shrinking */
+    
+    /* Padding for breathing room */
+    padding: clamp(4px, 1vh, 8px) 0;
+}
+
+/* Grid container - this is the actual game grid */
+.board-grid {
+    /* Use CSS Grid for the tiles */
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
+    gap: clamp(3px, 0.5vmin, 6px);
+    
+    /* Dynamic aspect ratio based on grid dimensions */
+    /* For 5 cols, 6 rows: aspect-ratio = 5/6 */
+    /* For 25 cols, 6 rows: aspect-ratio = 25/6 */
+    aspect-ratio: calc(var(--cols) / var(--rows));
+    
+    /* Start with full width, let aspect-ratio calculate height */
+    /* Then constrain by max-height if height exceeds available space */
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    
+    /* Container queries for responsive font sizing */
+    container-type: size;
+}
+
+/* Tile - Square cells that scale with grid */
+.tile {
+    /* Let grid handle sizing */
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1; /* Always square */
+    
+    /* Layout */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Styling */
+    border: 2px solid var(--color-border);
+    font-size: clamp(12px, 5cqmin, 32px); /* Responsive to container */
+    font-weight: 700;
+    text-transform: uppercase;
+    user-select: none;
+    
+    /* Animation */
+    transition: transform 0.1s ease;
+}
+
+.tile.filled {
+    border-color: var(--color-border-filled);
+    animation: pop 0.1s ease;
+}
+
+.tile.correct {
+    background-color: var(--color-correct);
+    border-color: var(--color-correct);
+    color: white;
+}
+
+.tile.present {
+    background-color: var(--color-present);
+    border-color: var(--color-present);
+    color: white;
+}
+
+.tile.absent {
+    background-color: var(--color-absent);
+    border-color: var(--color-absent);
+    color: white;
+}
+
+.tile.flip {
+    animation: flip 0.5s ease-in-out;
+}
+
+@keyframes pop {
+    50% { transform: scale(1.1); }
+}
+
+@keyframes flip {
+    0% { transform: rotateX(0); }
+    50% { transform: rotateX(90deg); }
+    100% { transform: rotateX(0); }
+}
+
+/* ==============================================
+   KEYBOARD - BOTTOM ALIGNED, INTRINSIC HEIGHT
+   ============================================== */
+
+.keyboard {
+    /* No flex-grow, only shrink protection */
+    flex: 0 0 auto;
+    
+    /* Full width */
+    width: 100%;
+    
+    /* Internal layout */
+    display: flex;
+    flex-direction: column;
+    gap: clamp(3px, 1vw, 6px);
+    
+    /* Padding for spacing from board */
+    padding-top: clamp(6px, 2vw, 10px);
+}
+
+.keyboard-row {
+    display: flex;
+    justify-content: center;
+    gap: clamp(2px, 0.8vw, 4px);
+}
+
+.key {
+    /* Flexible sizing */
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: clamp(28px, 8vw, 43px);
+    height: clamp(38px, 10vw, 58px);
+    
+    /* Prevent distortion */
+    aspect-ratio: 3 / 4;
+    
+    /* Layout */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Styling */
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--color-border);
+    
+    /* Typography */
+    font-size: clamp(11px, 3vw, 14px);
+    font-weight: 700;
+    
+    /* Interaction */
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.1s ease, transform 0.05s ease;
+}
+
+.key:hover {
+    background-color: #c0c3c6;
+}
+
+.key:active {
+    transform: scale(0.95);
+}
+
+.key.key-large {
+    max-width: clamp(42px, 13vw, 75px);
+    font-size: clamp(9px, 2.5vw, 12px);
+}
+
+.key.correct {
+    background-color: var(--color-correct);
+    color: white;
+}
+
+.key.present {
+    background-color: var(--color-present);
+    color: white;
+}
+
+.key.absent {
+    background-color: var(--color-absent);
+    color: white;
+}
+
+/* ==============================================
+   MODAL
+   ============================================== */
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 24px;
+    border-radius: 8px;
+    max-width: min(90vw, 500px);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-content .close {
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.modal-content .close:hover {
+    color: #666;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.modal-content p {
+    margin-bottom: 12px;
+}
+
+.modal-content hr {
+    margin: 16px 0;
+    border: none;
+    border-top: 1px solid var(--color-border);
+}
+
+.examples {
+    margin: 16px 0;
+}
+
+.examples .example-row {
+    display: flex;
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.examples .tile {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+}
+
+/* ==============================================
+   ANIMATIONS
+   ============================================== */
+
+.shake {
+    animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
