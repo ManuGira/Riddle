@@ -14,8 +14,13 @@ uv run myscript.py
 ```bash
 python myscript.py
 ```
+# Running CI with UV
+
+Testing, format checking and types checking can all be run at once with powershell file  `./ci.ps1`. 
+Alternatively it is possible to run this checks individually
 
 ## Testing
+
 tests are also run using `uv`.
 To run all tests at once, use:
 ```bash
@@ -25,6 +30,24 @@ uv run pytest tests
 run individual test files like so:
 ```bash
 uv run pytest tests/test_example.py
+
+```
+
+## Format checking
+
+```bash
+uv run ruff --fix .
+```
+
+The fix option will automatically apply safe fixes to your code
+
+
+## Type checking
+
+type checking is currently not working on all files. For now we run them only in folders `src/riddle/` and `src/wordle/`
+```bash
+uv run ty check ./src/riddle/
+uv run ty check ./src/wordle/
 ```
 
 ## Examples
