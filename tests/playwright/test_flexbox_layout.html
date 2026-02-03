@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexbox Layout Test</title>
+    <style>
+        /* Reset margins and padding for predictable layout */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        /* Test Case 1: Horizontal flex container with space-between */
+        .flex-row-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 600px;
+            height: 100px;
+            background-color: #e0e0e0;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .flex-row-item {
+            width: 80px;
+            height: 60px;
+            background-color: #2196F3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        /* Test Case 2: Vertical flex container with flex-start */
+        .flex-column-container {
+            position: absolute;
+            top: 140px;
+            left: 20px;
+            width: 200px;
+            height: 400px;
+            background-color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            gap: 10px;
+            padding: 15px;
+        }
+
+        .flex-column-item {
+            height: 50px;
+            background-color: #4CAF50;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        /* Test Case 3: Centered flex container */
+        .flex-center-container {
+            position: absolute;
+            top: 140px;
+            left: 240px;
+            width: 300px;
+            height: 200px;
+            background-color: #e0e0e0;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .flex-center-item {
+            width: 100px;
+            height: 100px;
+            background-color: #FF5722;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        /* Test Case 4: Flex container with gap property */
+        .flex-gap-container {
+            position: absolute;
+            top: 360px;
+            left: 240px;
+            width: 400px;
+            height: 100px;
+            background-color: #e0e0e0;
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 20px;
+            padding: 10px;
+        }
+
+        .flex-gap-item {
+            width: 60px;
+            height: 60px;
+            background-color: #9C27B0;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+
+        /* Test Case 5: Flex container with flex-grow items */
+        .flex-grow-container {
+            position: absolute;
+            top: 480px;
+            left: 240px;
+            width: 500px;
+            height: 80px;
+            background-color: #e0e0e0;
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .flex-grow-item-small {
+            flex-grow: 1;
+            height: 60px;
+            background-color: #00BCD4;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+
+        .flex-grow-item-large {
+            flex-grow: 2;
+            height: 60px;
+            background-color: #009688;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Test Case 1: Horizontal row with space-between -->
+    <div class="flex-row-container" id="row-container">
+        <div class="flex-row-item" id="row-item-1">Item 1</div>
+        <div class="flex-row-item" id="row-item-2">Item 2</div>
+        <div class="flex-row-item" id="row-item-3">Item 3</div>
+    </div>
+
+    <!-- Test Case 2: Vertical column with gap -->
+    <div class="flex-column-container" id="column-container">
+        <div class="flex-column-item" id="col-item-1">Col 1</div>
+        <div class="flex-column-item" id="col-item-2">Col 2</div>
+        <div class="flex-column-item" id="col-item-3">Col 3</div>
+    </div>
+
+    <!-- Test Case 3: Centered item -->
+    <div class="flex-center-container" id="center-container">
+        <div class="flex-center-item" id="center-item">Centered</div>
+    </div>
+
+    <!-- Test Case 4: Items with gap -->
+    <div class="flex-gap-container" id="gap-container">
+        <div class="flex-gap-item" id="gap-item-1">G1</div>
+        <div class="flex-gap-item" id="gap-item-2">G2</div>
+        <div class="flex-gap-item" id="gap-item-3">G3</div>
+    </div>
+
+    <!-- Test Case 5: Flex-grow items -->
+    <div class="flex-grow-container" id="grow-container">
+        <div class="flex-grow-item-small" id="grow-item-1">Small</div>
+        <div class="flex-grow-item-large" id="grow-item-2">Large</div>
+        <div class="flex-grow-item-small" id="grow-item-3">Small</div>
+    </div>
+</body>
+</html>
