@@ -226,10 +226,6 @@ body {
     height: 100%;
     aspect-ratio: 1 / 1; /* Always square */
     
-    /* Minimum readable size */
-    min-width: 18px;
-    min-height: 18px;
-    
     /* Layout */
     display: flex;
     align-items: center;
