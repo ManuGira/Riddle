@@ -36,6 +36,7 @@
             justify-content: center;
             width: 100%;
             min-height: 0; /* Critical: allows flex item to shrink below content height */
+            min-width: 0;  /* Critical: allows flex item to shrink below content width */
             background-color: #d0d0d0;
         }
 
@@ -49,14 +50,11 @@
             /* Dynamic aspect-ratio based on column/row count */
             aspect-ratio: calc(var(--cols, 5) / var(--rows, 6));
             
-            /* Critical sizing pattern - constrain in both dimensions */
+            /* SIMPLIFIED: Start at container size, let aspect-ratio shrink as needed */
             width: 100%;
-            height: auto;
-            max-width: 100%;  /* Constrain width */
-            max-height: 100%; /* Constrain height */
-            
-            /* Make grid explicitly shrinkable as a flex child */
-            flex-shrink: 1;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
             
             /* Container queries for responsive sizing */
             container-type: size;
