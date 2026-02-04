@@ -50,17 +50,18 @@
             /* Dynamic aspect-ratio based on column/row count */
             aspect-ratio: calc(var(--cols, 5) / var(--rows, 6));
             
-            /* Pattern from Wordle architecture (commit 51e36ac):
-               1. Start with width: 100% (fill parent width)
-               2. height: auto lets aspect-ratio calculate height
-               3. max-height: 100% constrains if calculated height exceeds parent
-               4. Aspect-ratio then reduces width to maintain proportions
-               
-               This works because the parent (.board-container) has a definite height
-               from flex: 1 1 auto, and min-height: 0 allows shrinking. */
+            /* Improved sizing to fit within container automatically:
+               - Start with width: 100% to fill container width
+               - Let aspect-ratio calculate the corresponding height
+               - max-height: 100% constrains height if it would exceed container
+               - When height is constrained, aspect-ratio automatically reduces width
+               - min-width/min-height: 0 allows proper shrinking in flex context */
             width: 100%;
             height: auto;
+            max-width: 100%;
             max-height: 100%;
+            min-width: 0;
+            min-height: 0;
             
             /* Container queries for responsive sizing */
             container-type: size;
