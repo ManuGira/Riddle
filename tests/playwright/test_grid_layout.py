@@ -398,3 +398,56 @@ def test_grid_css_variables(page, grid_layout_page_path):
         f"Grid should have 5 columns: {css_vars['gridTemplateColumns']}"
     assert len(row_values) == 6, \
         f"Grid should have 6 rows: {css_vars['gridTemplateRows']}"
+
+
+def test_grid_tiles_do_not_overflow_container(page, grid_layout_page_path):
+    """Test that all tiles remain within the board-container bounds.
+    
+    This test validates the CSS Grid overflow issue where tiles can extend
+    beyond the container boundaries. This is a critical requirement for
+    proper grid adaptation to its parent container.
+    
+    Issue: With standard viewport (800x600), the 6x5 grid's last two rows
+    (rows 4 and 5) were extending beyond the gray board-container border.
+    """
+    # Use standard viewport size (same as other tests)
+    page.set_viewport_size({"width": 800, "height": 600})
+    page.goto(f"file://{grid_layout_page_path}")
+    
+    # Initialize grid with 6x5 configuration
+    page.evaluate("initializeGrid(6, 5)")
+    page.wait_for_timeout(100)
+    
+    # Get container and all tiles
+    container = page.locator(".board-container")
+    grid = page.locator("#grid")
+    
+    assert container.is_visible(), "Board container should be visible"
+    assert grid.is_visible(), "Grid should be visible"
+    
+    container_bbox = container.bounding_box()
+    
+    # Check all 30 tiles (6 rows × 5 columns)
+    for row in range(6):
+        for col in range(5):
+            tile = page.locator(f'.tile[data-row="{row}"][data-col="{col}"]')
+            assert tile.is_visible(), f"Tile ({row},{col}) should be visible"
+            
+            tile_bbox = tile.bounding_box()
+            assert tile_bbox is not None, f"Tile ({row},{col}) bounding box should exist"
+            
+            # Critical assertion: tile must not overflow container bottom
+            tile_bottom = tile_bbox["y"] + tile_bbox["height"]
+            container_bottom = container_bbox["y"] + container_bbox["height"]
+            
+            assert tile_bottom <= container_bottom + 1, \
+                f"Tile ({row},{col}) overflows container: tile bottom={tile_bottom}, " \
+                f"container bottom={container_bottom}, overflow={tile_bottom - container_bottom}px"
+            
+            # Also check right edge
+            tile_right = tile_bbox["x"] + tile_bbox["width"]
+            container_right = container_bbox["x"] + container_bbox["width"]
+            
+            assert tile_right <= container_right + 1, \
+                f"Tile ({row},{col}) overflows container right: tile right={tile_right}, " \
+                f"container right={container_right}"
