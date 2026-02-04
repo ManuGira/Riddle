@@ -24,6 +24,7 @@ jobs:
           if [ -d "./tmp/screenshots" ]; then
             cp -r ./tmp/screenshots/* ./src/static/test-screenshots/ || true
           fi
+          echo "Test screenshots available at: https://manugira.github.io/Riddle/pr-${{ github.event.pull_request.number }}/test-screenshots/"
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
