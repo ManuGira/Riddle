@@ -25,7 +25,6 @@
             display: flex;
             flex-direction: column;
             background-color: #e0e0e0;
-            padding: 20px;
             box-sizing: border-box;
         }
 
@@ -35,8 +34,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 100%; /* Explicit width */
-            min-height: 0; /* Critical: allows flex item to shrink */
+            width: 100%;
+            min-height: 0; /* Critical: allows flex item to shrink below content height */
             background-color: #d0d0d0;
         }
 
@@ -50,15 +49,14 @@
             /* Dynamic aspect-ratio based on column/row count */
             aspect-ratio: calc(var(--cols, 5) / var(--rows, 6));
             
-            /* Critical sizing pattern (matches real Wordle):
-               - Start with width: 100% to fill container width
-               - Let aspect-ratio calculate the corresponding height
-               - max-height: 100% constrains height if it would exceed container
-               - When height is constrained, aspect-ratio automatically reduces width to maintain proportions
-               - This creates automatic constraint selection: wide grids are width-limited, narrow grids are height-limited */
+            /* Critical sizing pattern - constrain in both dimensions */
             width: 100%;
             height: auto;
-            max-height: 100%;
+            max-width: 100%;  /* Constrain width */
+            max-height: 100%; /* Constrain height */
+            
+            /* Make grid explicitly shrinkable as a flex child */
+            flex-shrink: 1;
             
             /* Container queries for responsive sizing */
             container-type: size;
@@ -70,7 +68,11 @@
 
         /* Tile - must maintain square aspect ratio */
         .tile {
+            /* Let grid handle sizing - CRITICAL for proper containment */
+            width: 100%;
+            height: 100%;
             aspect-ratio: 1 / 1;
+            
             background-color: #ffffff;
             border: 2px solid #cccccc;
             display: flex;
