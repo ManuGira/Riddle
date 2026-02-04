@@ -138,10 +138,11 @@ uv run python3 tmp/screenshots/generate_screenshots.py
 5. Test multiple viewports (mobile/tablet/desktop)
 6. Test dvh units for mobile browser UI
 
-### ⚠️ Known Limitations
-1. **None remaining** - Grid overflow issue has been fixed
-2. **CSS Grid Quirks**: Bounding box measurements with aspect-ratio tiles are complex - tests validate correctness
+### ⚠️ Known Limitations (Updated after fix)
+1. **Grid overflow fixed** - Removed gap and padding that were causing sizing conflicts with aspect-ratio
+2. **CSS Grid + aspect-ratio constraint resolution** - grid gap is NOT included in intrinsic size with aspect-ratio, causing overflow. Solution: gap: 0, use tile borders for spacing
 3. **Small Tiles**: 6×25 grid creates ~30px tiles - usable but requires adequate viewport (1280px+ width recommended)
+4. **Viewport independence**: Layout now works with any viewport size - grid adapts automatically
 
 ## Design Decisions
 
