@@ -18,6 +18,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
+      - name: Copy test screenshots to preview
+        run: |
+          mkdir -p ./src/static/test-screenshots
+          if [ -d "./tmp/screenshots" ]; then
+            cp -r ./tmp/screenshots/* ./src/static/test-screenshots/ || true
+          fi
+      
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
