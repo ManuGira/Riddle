@@ -35,8 +35,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 100%; /* Explicit width */
             min-height: 0; /* Critical: allows flex item to shrink */
-            min-width: 0;
             background-color: #d0d0d0;
         }
 
@@ -50,18 +50,15 @@
             /* Dynamic aspect-ratio based on column/row count */
             aspect-ratio: calc(var(--cols, 5) / var(--rows, 6));
             
-            /* Improved sizing to fit within container automatically:
+            /* Critical sizing pattern (matches real Wordle):
                - Start with width: 100% to fill container width
                - Let aspect-ratio calculate the corresponding height
                - max-height: 100% constrains height if it would exceed container
-               - When height is constrained, aspect-ratio automatically reduces width
-               - min-width/min-height: 0 allows proper shrinking in flex context */
+               - When height is constrained, aspect-ratio automatically reduces width to maintain proportions
+               - This creates automatic constraint selection: wide grids are width-limited, narrow grids are height-limited */
             width: 100%;
             height: auto;
-            max-width: 100%;
             max-height: 100%;
-            min-width: 0;
-            min-height: 0;
             
             /* Container queries for responsive sizing */
             container-type: size;
