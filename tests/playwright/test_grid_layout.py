@@ -478,3 +478,215 @@ def test_grid_tiles_do_not_overflow_container(page, grid_layout_page_path):
     # The fix should keep overflow under control
     # Note: Perfect containment (0px overflow) is not achievable with CSS Grid + aspect-ratio
     # due to how grid track sizing works with intrinsic content sizes
+
+
+def test_strict_rule_board_must_not_overflow_viewport(page, grid_layout_page_path):
+    """STRICT RULE TEST: Board must not extend outside the viewport.
+    
+    This test validates that the board container (gray border) remains
+    fully visible within the viewport boundaries for various configurations.
+    
+    Rule: The viewport must constrain the grid board. I.e: the board must
+    not extend out of the viewport.
+    
+    THIS TEST IS EXPECTED TO FAIL until the layout is fixed.
+    """
+    configs = [
+        ("6x3 horizontal", 6, 3, 1400, 600),
+        ("6x3 vertical", 6, 3, 600, 1400),
+        ("6x25 horizontal", 6, 25, 1600, 600),
+        ("6x25 vertical", 6, 25, 800, 1400),
+    ]
+    
+    violations = []
+    
+    for config_name, rows, cols, width, height in configs:
+        page.set_viewport_size({"width": width, "height": height})
+        page.goto(f"file://{grid_layout_page_path}")
+        page.evaluate(f"initializeGrid({rows}, {cols})")
+        page.wait_for_timeout(100)
+        
+        container = page.locator(".board-container")
+        assert container.is_visible(), f"{config_name}: Board container should be visible"
+        
+        container_bbox = container.bounding_box()
+        
+        # Rule 1: Board must not overflow viewport
+        # Check all four edges
+        if container_bbox["x"] < 0:
+            violations.append(f"{config_name}: Board left edge at {container_bbox['x']}px (overflows viewport left)")
+        
+        if container_bbox["y"] < 0:
+            violations.append(f"{config_name}: Board top edge at {container_bbox['y']}px (overflows viewport top)")
+        
+        board_right = container_bbox["x"] + container_bbox["width"]
+        if board_right > width:
+            violations.append(
+                f"{config_name}: Board right edge at {board_right}px exceeds viewport width {width}px "
+                f"(overflow: {board_right - width}px)"
+            )
+        
+        board_bottom = container_bbox["y"] + container_bbox["height"]
+        if board_bottom > height:
+            violations.append(
+                f"{config_name}: Board bottom edge at {board_bottom}px exceeds viewport height {height}px "
+                f"(overflow: {board_bottom - height}px)"
+            )
+    
+    # Report all violations
+    if violations:
+        violation_report = "\n  - ".join([""] + violations)
+        pytest.fail(f"RULE VIOLATION: Board extends outside viewport:{violation_report}")
+
+
+def test_strict_rule_grid_must_not_overflow_board(page, grid_layout_page_path):
+    """STRICT RULE TEST: Grid tiles must not extend outside the board container.
+    
+    This test validates that all tiles remain within the board container
+    (gray border) boundaries for various configurations.
+    
+    Rule: The grid board must constrain the grid of tiles. I.e: the grid of
+    tiles must not extend out of the grid board.
+    
+    THIS TEST IS EXPECTED TO FAIL until the layout is fixed.
+    """
+    configs = [
+        ("6x3 horizontal", 6, 3, 1400, 600),
+        ("6x3 vertical", 6, 3, 600, 1400),
+        ("6x25 horizontal", 6, 25, 1600, 600),
+        ("6x25 vertical", 6, 25, 800, 1400),
+    ]
+    
+    violations = []
+    
+    for config_name, rows, cols, width, height in configs:
+        page.set_viewport_size({"width": width, "height": height})
+        page.goto(f"file://{grid_layout_page_path}")
+        page.evaluate(f"initializeGrid({rows}, {cols})")
+        page.wait_for_timeout(100)
+        
+        container = page.locator(".board-container")
+        container_bbox = container.bounding_box()
+        
+        # Check all tiles
+        config_violations = []
+        for row in range(rows):
+            for col in range(cols):
+                tile = page.locator(f'.tile[data-row="{row}"][data-col="{col}"]')
+                if not tile.is_visible():
+                    continue
+                
+                tile_bbox = tile.bounding_box()
+                if tile_bbox is None:
+                    continue
+                
+                # Rule 2: Tiles must not overflow board container
+                # Check if tile extends beyond container boundaries
+                
+                # Left edge
+                if tile_bbox["x"] < container_bbox["x"]:
+                    config_violations.append(
+                        f"Tile ({row},{col}) left edge at {tile_bbox['x']}px < "
+                        f"container left {container_bbox['x']}px"
+                    )
+                
+                # Right edge
+                tile_right = tile_bbox["x"] + tile_bbox["width"]
+                container_right = container_bbox["x"] + container_bbox["width"]
+                if tile_right > container_right:
+                    config_violations.append(
+                        f"Tile ({row},{col}) right edge at {tile_right}px > "
+                        f"container right {container_right}px (overflow: {tile_right - container_right:.1f}px)"
+                    )
+                
+                # Top edge
+                if tile_bbox["y"] < container_bbox["y"]:
+                    config_violations.append(
+                        f"Tile ({row},{col}) top edge at {tile_bbox['y']}px < "
+                        f"container top {container_bbox['y']}px"
+                    )
+                
+                # Bottom edge
+                tile_bottom = tile_bbox["y"] + tile_bbox["height"]
+                container_bottom = container_bbox["y"] + container_bbox["height"]
+                if tile_bottom > container_bottom:
+                    config_violations.append(
+                        f"Tile ({row},{col}) bottom edge at {tile_bottom}px > "
+                        f"container bottom {container_bottom}px (overflow: {tile_bottom - container_bottom:.1f}px)"
+                    )
+        
+        if config_violations:
+            # Only report first few violations per config to keep output manageable
+            sample = config_violations[:3]
+            more = len(config_violations) - 3
+            violations.append(
+                f"{config_name}: {len(config_violations)} tile overflow(s) - "
+                f"Examples: {'; '.join(sample)}" +
+                (f" ... and {more} more" if more > 0 else "")
+            )
+    
+    # Report all violations
+    if violations:
+        violation_report = "\n  - ".join([""] + violations)
+        pytest.fail(f"RULE VIOLATION: Tiles extend outside board container:{violation_report}")
+
+
+def test_strict_rule_tiles_must_be_square(page, grid_layout_page_path):
+    """STRICT RULE TEST: All tiles must be square shaped.
+    
+    This test validates that all tiles maintain a 1:1 aspect ratio (square)
+    for various configurations.
+    
+    Rule: Tiles must be square shaped.
+    
+    This test should PASS as the current CSS correctly maintains square tiles.
+    """
+    configs = [
+        ("6x3 horizontal", 6, 3, 1400, 600),
+        ("6x3 vertical", 6, 3, 600, 1400),
+        ("6x25 horizontal", 6, 25, 1600, 600),
+        ("6x25 vertical", 6, 25, 800, 1400),
+    ]
+    
+    violations = []
+    
+    for config_name, rows, cols, width, height in configs:
+        page.set_viewport_size({"width": width, "height": height})
+        page.goto(f"file://{grid_layout_page_path}")
+        page.evaluate(f"initializeGrid({rows}, {cols})")
+        page.wait_for_timeout(100)
+        
+        # Check all tiles
+        non_square_tiles = []
+        for row in range(rows):
+            for col in range(cols):
+                tile = page.locator(f'.tile[data-row="{row}"][data-col="{col}"]')
+                if not tile.is_visible():
+                    continue
+                
+                tile_bbox = tile.bounding_box()
+                if tile_bbox is None:
+                    continue
+                
+                # Rule 3: Tiles must be square (width ≈ height, ≤1px tolerance)
+                width_diff = abs(tile_bbox["width"] - tile_bbox["height"])
+                if width_diff > 1:
+                    non_square_tiles.append(
+                        f"Tile ({row},{col}): {tile_bbox['width']:.1f}×{tile_bbox['height']:.1f}px "
+                        f"(diff: {width_diff:.1f}px)"
+                    )
+        
+        if non_square_tiles:
+            # Report first few non-square tiles
+            sample = non_square_tiles[:3]
+            more = len(non_square_tiles) - 3
+            violations.append(
+                f"{config_name}: {len(non_square_tiles)} non-square tile(s) - "
+                f"Examples: {'; '.join(sample)}" +
+                (f" ... and {more} more" if more > 0 else "")
+            )
+    
+    # Report all violations
+    if violations:
+        violation_report = "\n  - ".join([""] + violations)
+        pytest.fail(f"RULE VIOLATION: Tiles are not square:{violation_report}")
