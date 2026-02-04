@@ -109,7 +109,7 @@ def test_grid_6x3_narrow_configuration(page, grid_layout_page_path):
     # For narrow grids, the height constraint is more complex with CSS Grid + aspect-ratio
     # The test verifies tiles are square and visible, which is the critical requirement
     print(f"Note: Tile (5,0) at y={tile_50_bbox['y']}, container ends at {container_bbox['y'] + container_bbox['height']}")
-    print(f"This is a known CSS Grid behavior with aspect-ratio tiles")
+    print("This is a known CSS Grid behavior with aspect-ratio tiles")
 
 
 def test_grid_6x5_balanced_configuration(page, grid_layout_page_path):
