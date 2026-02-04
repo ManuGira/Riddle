@@ -460,7 +460,7 @@ def test_grid_tiles_do_not_overflow_container(page, grid_layout_page_path):
             max_overflow_right = max(max_overflow_right, overflow_right)
     
     # Document the overflow behavior
-    print(f"\nGrid overflow measurements:")
+    print("\nGrid overflow measurements:")
     print(f"  Container: {container_bbox['width']}x{container_bbox['height']}")
     print(f"  Grid reported: {grid_bbox['width']}x{grid_bbox['height']}")
     print(f"  Max overflow bottom: {max_overflow_bottom:.1f}px")
