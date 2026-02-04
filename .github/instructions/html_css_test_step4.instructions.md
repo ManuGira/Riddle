@@ -47,23 +47,23 @@ document.documentElement.style.setProperty('--rows', rows);
 5. **test_grid_css_variables** - CSS variable usage validation
 6. **test_grid_tiles_do_not_overflow_container** - Overflow stays under control
 
-### Strict Rule Validation Tests (3 tests - TDD approach)
+### Strict Rule Validation Tests (3 tests - all passing after fix)
 7. **test_strict_rule_board_must_not_overflow_viewport** ✅ PASSES
-8. **test_strict_rule_grid_must_not_overflow_board** ❌ FAILS (demonstrates violations)
+8. **test_strict_rule_grid_must_not_overflow_board** ✅ PASSES (fixed)
 9. **test_strict_rule_tiles_must_be_square** ✅ PASSES
 
-**Current Status:** 8/9 passing (1 intentionally failing to demonstrate rule violations before fix)
+**Current Status:** All 9 tests passing (grid overflow fixed)
 
-**Detected Violations:**
-- 6×3 horizontal (1400×600): 15 tiles overflow board bottom by up to 343px
-- 6×25 vertical (800×1400): 30 tiles overflow board right by up to 74px
+**Previous violations (now fixed):**
+- 6×3 horizontal (1400×600): 15 tiles were overflowing board bottom by up to 343px → **FIXED**
+- 6×25 vertical (800×1400): 30 tiles were overflowing board right by up to 74px → **FIXED**
 
 ## Layout Rules to Enforce
 
 1. **Viewport → Board**: Board must stay within viewport (✅ passing)
-2. **Board → Grid**: Grid tiles must stay within board (❌ failing - needs fix)
+2. **Board → Grid**: Grid tiles must stay within board (✅ passing - fixed)
 3. **Tiles**: Must be square (✅ passing)
-4. **Tiles**: Can be as small as needed to fit
+4. **Tiles**: Can be as small as needed to fit (✅ passing)
 
 ## Key Learnings
 
@@ -80,12 +80,16 @@ document.documentElement.style.setProperty('--rows', rows);
 3. **Container Queries**: `container-type: size` required for Step 5 responsive font sizing
 4. **Viewport Units**: Step 5 will use dvh for mobile browser UI
 
-### Current Issue 🐛
-CSS Grid with aspect-ratio tiles doesn't automatically shrink to fit the board container. The strict rule tests (added via TDD) demonstrate:
-- Tiles overflow board in certain viewport/configuration combinations
-- Board stays within viewport (good)
-- Tiles remain square (good)
-- **Next step**: Implement CSS fix to make grid respect board boundaries
+### Issue Resolution ✅
+**Problem:** CSS Grid with aspect-ratio tiles was overflowing the board container in certain configurations (6×3 horizontal: 343px overflow, 6×25 vertical: 74px overflow).
+
+**Root Cause:** Extra CSS constraints (`max-width`, `min-width`, `min-height` on grid, `min-width` on board-container) were interfering with aspect-ratio's automatic constraint resolution mechanism.
+
+**Solution:** Simplified CSS to match real Wordle pattern exactly:
+- Board: `width: 100%; min-height: 0;` (removed `min-width: 0`)
+- Grid: `width: 100%; height: auto; max-height: 100%;` (removed `max-width`, `min-width`, `min-height`)
+
+**How it works:** Aspect-ratio automatically selects the limiting dimension - wide grids are width-constrained, narrow grids are height-constrained, tiles stay square.
 
 ## Testing Approach
 
@@ -135,9 +139,9 @@ uv run python3 tmp/screenshots/generate_screenshots.py
 6. Test dvh units for mobile browser UI
 
 ### ⚠️ Known Limitations
-1. **Overflow Issue**: Current CSS doesn't perfectly constrain grid to board (failing test demonstrates this)
-2. **CSS Grid Quirks**: Bounding box measurements with aspect-ratio tiles are complex - focus on visual correctness
-3. **Small Tiles**: 6×25 grid creates ~30px tiles - usable but requires adequate viewport
+1. **None remaining** - Grid overflow issue has been fixed
+2. **CSS Grid Quirks**: Bounding box measurements with aspect-ratio tiles are complex - tests validate correctness
+3. **Small Tiles**: 6×25 grid creates ~30px tiles - usable but requires adequate viewport (1280px+ width recommended)
 
 ## Design Decisions
 
@@ -152,8 +156,8 @@ uv run python3 tmp/screenshots/generate_screenshots.py
 1. ✅ Created basic tests validating CSS Grid works (6 tests)
 2. ✅ Added strict rule tests BEFORE implementing fix (3 tests)
 3. ✅ Confirmed tests can detect violations (1 test failing as expected)
-4. ⏳ **Next**: Implement CSS fix to make all tests pass
-5. ⏳ **Then**: Regenerate screenshots showing fixed layout
+4. ✅ **Implemented CSS fix** - Simplified to match real Wordle pattern
+5. ✅ **All tests passing** - Grid overflow resolved
 
 ## Screenshot Generation
 
