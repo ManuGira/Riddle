@@ -803,3 +803,78 @@ def test_gap_spacing_is_uniform(page, grid_layout_page_path):
     if violations:
         violation_report = "\n  - ".join([""] + violations)
         pytest.fail(f"GAP SPACING VIOLATIONS:{violation_report}")
+
+
+def test_grid_maximizes_space_usage(page, grid_layout_page_path):
+    """Test that the grid maximizes space usage by filling either horizontal or vertical space completely.
+    
+    This test validates that:
+    - The grid is as large as possible while maintaining uniform gaps
+    - Either horizontal padding OR vertical padding is minimal (≤ 5px tolerance)
+    - min(hpad, vpad) ≈ 0 (within tolerance)
+    
+    The grid should fill all available space in one direction (width or height),
+    with only the other direction having padding. This ensures maximum tile size
+    while maintaining uniform gaps and square tiles.
+    
+    Test cases:
+    - 6×3 horizontal (1400×600): height-constrained, vpad ≈ 0, hpad > 0
+    - 6×3 vertical (600×1400): width-constrained, hpad ≈ 0, vpad > 0
+    - 6×5 balanced (800×600): one dimension constrained
+    - 6×25 horizontal (1600×600): height-constrained, vpad ≈ 0
+    - 6×25 vertical (800×1400): width-constrained, hpad ≈ 0
+    """
+    configs = [
+        ("6x3 horizontal", 6, 3, 1400, 600, "height"),  # Height-constrained
+        ("6x3 vertical", 6, 3, 600, 1400, "width"),     # Width-constrained
+        ("6x5 balanced", 6, 5, 800, 600, "height"),     # Height-constrained
+        ("6x25 horizontal", 6, 25, 1600, 600, "height"), # Height-constrained
+        ("6x25 vertical", 6, 25, 800, 1400, "width"),    # Width-constrained
+    ]
+    
+    violations = []
+    tolerance = 5  # pixels
+    
+    for config_name, rows, cols, width, height, expected_constraint in configs:
+        page.set_viewport_size({"width": width, "height": height})
+        page.goto(f"file://{grid_layout_page_path}")
+        page.evaluate(f"initializeGrid({rows}, {cols})")
+        page.wait_for_timeout(100)
+        
+        # Get bounding boxes
+        container = page.locator(".board-container")
+        grid = page.locator("#grid")
+        
+        container_bbox = container.bounding_box()
+        grid_bbox = grid.bounding_box()
+        
+        assert container_bbox is not None, f"{config_name}: Container bounding box should exist"
+        assert grid_bbox is not None, f"{config_name}: Grid bounding box should exist"
+        
+        # Calculate padding on all sides
+        # Padding = space between container edge and grid edge
+        hpad_left = grid_bbox["x"] - container_bbox["x"]
+        hpad_right = (container_bbox["x"] + container_bbox["width"]) - (grid_bbox["x"] + grid_bbox["width"])
+        vpad_top = grid_bbox["y"] - container_bbox["y"]
+        vpad_bottom = (container_bbox["y"] + container_bbox["height"]) - (grid_bbox["y"] + grid_bbox["height"])
+        
+        # Total padding in each direction
+        hpad_total = hpad_left + hpad_right
+        vpad_total = vpad_top + vpad_bottom
+        
+        # Check that min(hpad, vpad) is approximately 0
+        min_padding = min(hpad_total, vpad_total)
+        
+        if min_padding > tolerance:
+            violations.append(
+                f"{config_name}: Grid should maximize space usage - "
+                f"min(hpad={hpad_total:.1f}px, vpad={vpad_total:.1f}px) = {min_padding:.1f}px > {tolerance}px tolerance. "
+                f"Expected {expected_constraint}-constrained (min padding in {expected_constraint} direction). "
+                f"Padding breakdown: left={hpad_left:.1f}px, right={hpad_right:.1f}px, "
+                f"top={vpad_top:.1f}px, bottom={vpad_bottom:.1f}px"
+            )
+    
+    # Report all violations
+    if violations:
+        violation_report = "\n  - ".join([""] + violations)
+        pytest.fail(f"SPACE MAXIMIZATION VIOLATIONS:{violation_report}")
