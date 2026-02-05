@@ -693,28 +693,17 @@ def test_strict_rule_tiles_must_be_square(page, grid_layout_page_path):
 
 
 def test_gap_spacing_is_uniform(page, grid_layout_page_path):
-    """Test that the CSS gap property is correctly configured for uniform spacing.
+    """Test that gap spacing between tiles is uniform in all directions.
     
     This test validates that:
     - CSS gap property is set to 5px (for both rowGap and columnGap)
     - All horizontal gaps are consistent with each other
     - All vertical gaps are consistent with each other
+    - Horizontal gaps equal vertical gaps (tight, centered grid)
     
-    **Note on visual gap equality**: Due to CSS Grid track sizing with minmax(0, 1fr)
-    and dynamic aspect-ratio, the visual spacing between tiles may differ between
-    horizontal and vertical directions. This is because tiles use max-width/max-height
-    to maintain square aspect-ratio, which allows them to be smaller than grid tracks.
-    
-    The CSS gap property creates uniform spacing within the grid's coordinate system,
-    but visual spacing depends on how much of each track the tile occupies. This is
-    a fundamental limitation of combining:
-    - CSS Grid with gap
-    - Dynamic aspect-ratio
-    - Square tiles (via aspect-ratio: 1/1)
-    - Overflow prevention (via minmax(0, 1fr))
-    
-    The test validates that the CSS is correctly configured, acknowledging that
-    perfect visual gap equality across directions requires a different layout approach.
+    With the new natural-sizing approach (no aspect-ratio on grid), the grid
+    sizes itself based on tiles, creating uniform 5px gaps in all directions.
+    Any excess space in the board-container becomes padding around the centered grid.
     """
     configs = [
         ("6x3", 6, 3, 800, 600),
@@ -797,6 +786,18 @@ def test_gap_spacing_is_uniform(page, grid_layout_page_path):
                     violations.append(
                         f"{config_name}: Inconsistent vertical gaps - gap {i}={gap:.1f}px, avg={avg_vertical_gap:.1f}px"
                     )
+        
+        # Check that horizontal gaps equal vertical gaps
+        if horizontal_gaps and vertical_gaps:
+            avg_horizontal_gap = sum(horizontal_gaps) / len(horizontal_gaps)
+            avg_vertical_gap = sum(vertical_gaps) / len(vertical_gaps)
+            gap_difference = abs(avg_horizontal_gap - avg_vertical_gap)
+            if gap_difference > 1:
+                violations.append(
+                    f"{config_name}: Horizontal and vertical gaps differ - "
+                    f"horizontal={avg_horizontal_gap:.1f}px, vertical={avg_vertical_gap:.1f}px "
+                    f"(difference: {gap_difference:.1f}px)"
+                )
     
     # Report all violations
     if violations:

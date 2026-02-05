@@ -26,6 +26,7 @@
             flex-direction: column;
             background-color: #e0e0e0;
             box-sizing: border-box;
+            border: 3px solid red; /* Viewport border */
         }
 
         /* Board container - takes available space within test container */
@@ -40,23 +41,25 @@
             background-color: #d0d0d0;
         }
 
-        /* Grid container - uses CSS Grid with dynamic aspect-ratio */
+        /* Grid container - uses CSS Grid with calculated sizing */
         .board-grid {
             display: grid;
-            grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
-            grid-template-rows: repeat(var(--rows, 6), minmax(0, 1fr));
-            gap: 5px; /* Gap between tiles */
+            grid-template-columns: repeat(var(--cols, 5), 1fr);
+            grid-template-rows: repeat(var(--rows, 6), 1fr);
+            gap: 5px; /* Gap between tiles - uniform in both directions */
             
-            /* Dynamic aspect-ratio based on column/row count */
-            aspect-ratio: calc(var(--cols, 5) / var(--rows, 6));
+            /* Calculate grid size based on tile size:
+             * total = (tile_size * count) + (gap * (count - 1)) + (padding * 2) + (border * 2)
+             * We need to use the min() from tile calculation inline here
+             */
+            --tile-size: min(
+                80px,
+                max(10px, calc((100vw - 28px - (var(--cols, 5) - 1) * 5px) / var(--cols, 5))),
+                max(10px, calc((100vh - 28px - (var(--rows, 6) - 1) * 5px) / var(--rows, 6)))
+            );
             
-            /* KEY FIX: width 100%, height auto lets aspect-ratio work properly */
-            width: 100%;
-            height: auto;
-            max-height: 100%;
-            
-            /* Prevent visual overflow */
-            overflow: hidden;
+            width: calc(var(--tile-size) * var(--cols, 5) + 5px * (var(--cols, 5) - 1) + 16px);
+            height: calc(var(--tile-size) * var(--rows, 6) + 5px * (var(--rows, 6) - 1) + 16px);
             
             /* Container queries for responsive sizing */
             container-type: size;
@@ -64,14 +67,17 @@
             background-color: #f5f5f5;
             padding: 5px; /* Padding around grid */
             box-sizing: border-box;
+            border: 3px solid green; /* Board grid border */
         }
 
         /* Tile - must maintain square aspect ratio */
         .tile {
-            /* CRITICAL: Use max-width/max-height instead of width/height
-             * to allow tiles to shrink while maintaining square shape */
-            max-width: 100%;
-            max-height: 100%;
+            /* Use the same calculation as grid's --tile-size */
+            width: min(
+                80px,
+                max(10px, calc((100vw - 28px - (var(--cols, 5) - 1) * 5px) / var(--cols, 5))),
+                max(10px, calc((100vh - 28px - (var(--rows, 6) - 1) * 5px) / var(--rows, 6)))
+            );
             aspect-ratio: 1 / 1;
             
             background-color: #ffffff;
