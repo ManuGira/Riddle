@@ -45,7 +45,7 @@
             display: grid;
             grid-template-columns: repeat(var(--cols, 5), 1fr);
             grid-template-rows: repeat(var(--rows, 6), 1fr);
-            gap: 0; /* No gap - tiles handle their own spacing via borders */
+            gap: 5px; /* Gap between tiles */
             
             /* Dynamic aspect-ratio based on column/row count */
             aspect-ratio: calc(var(--cols, 5) / var(--rows, 6));
@@ -59,7 +59,7 @@
             container-type: size;
             
             background-color: #f5f5f5;
-            padding: 0; /* No padding - simplifies sizing */
+            padding: 5px; /* Padding around grid */
             box-sizing: border-box;
         }
 
