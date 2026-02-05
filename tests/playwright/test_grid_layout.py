@@ -881,3 +881,98 @@ def test_grid_maximizes_space_usage(page, grid_layout_page_path):
     if violations:
         violation_report = "\n  - ".join([""] + violations)
         pytest.fail(f"SPACE MAXIMIZATION VIOLATIONS:{violation_report}")
+
+
+def test_grid_tiny_viewport_50x50(page, grid_layout_page_path):
+    """Test grid visibility in extremely small 50x50 viewport.
+    
+    This test validates that the grid can handle very small viewports.
+    Expected to fail initially - will be fixed later.
+    
+    Tests:
+    - Grid is fully visible (no overflow)
+    - All tiles are visible
+    - Tiles remain square
+    - Grid doesn't exceed viewport bounds
+    """
+    # Set viewport to extremely small size
+    page.set_viewport_size({"width": 50, "height": 50})
+    page.goto(f"file://{grid_layout_page_path}")
+    
+    # Test configurations at tiny viewport
+    configurations = [
+        {"rows": 6, "cols": 3, "name": "6×3 tiny viewport"},
+        {"rows": 6, "cols": 5, "name": "6×5 tiny viewport"},
+    ]
+    
+    violations = []
+    
+    for config in configurations:
+        # Initialize grid
+        page.evaluate(f"initializeGrid({config['rows']}, {config['cols']})")
+        page.wait_for_timeout(100)
+        
+        config_name = config["name"]
+        
+        # Get viewport, grid, and tile elements
+        viewport_container = page.locator(".test-container")
+        grid = page.locator("#grid")
+        
+        assert viewport_container.is_visible(), f"{config_name}: Viewport should be visible"
+        assert grid.is_visible(), f"{config_name}: Grid should be visible"
+        
+        viewport_bbox = viewport_container.bounding_box()
+        grid_bbox = grid.bounding_box()
+        
+        assert viewport_bbox is not None, f"{config_name}: Viewport bounding box should exist"
+        assert grid_bbox is not None, f"{config_name}: Grid bounding box should exist"
+        
+        # Check that grid doesn't overflow viewport
+        # Account for test-container border (3px on each side)
+        viewport_left = viewport_bbox["x"] + 3
+        viewport_right = viewport_bbox["x"] + viewport_bbox["width"] - 3
+        viewport_top = viewport_bbox["y"] + 3
+        viewport_bottom = viewport_bbox["y"] + viewport_bbox["height"] - 3
+        
+        grid_left = grid_bbox["x"]
+        grid_right = grid_bbox["x"] + grid_bbox["width"]
+        grid_top = grid_bbox["y"]
+        grid_bottom = grid_bbox["y"] + grid_bbox["height"]
+        
+        # Check for overflow
+        if grid_left < viewport_left:
+            violations.append(f"{config_name}: Grid overflows viewport left by {viewport_left - grid_left:.1f}px")
+        if grid_right > viewport_right:
+            violations.append(f"{config_name}: Grid overflows viewport right by {grid_right - viewport_right:.1f}px")
+        if grid_top < viewport_top:
+            violations.append(f"{config_name}: Grid overflows viewport top by {viewport_top - grid_top:.1f}px")
+        if grid_bottom > viewport_bottom:
+            violations.append(f"{config_name}: Grid overflows viewport bottom by {grid_bottom - viewport_bottom:.1f}px")
+        
+        # Check that all tiles are square
+        for row in range(config["rows"]):
+            for col in range(config["cols"]):
+                tile = page.locator(f'.tile[data-row="{row}"][data-col="{col}"]')
+                
+                if not tile.is_visible():
+                    violations.append(f"{config_name}: Tile ({row},{col}) is not visible")
+                    continue
+                
+                tile_bbox = tile.bounding_box()
+                if tile_bbox is None:
+                    violations.append(f"{config_name}: Tile ({row},{col}) has no bounding box")
+                    continue
+                
+                # Check squareness (1px tolerance)
+                width_height_diff = abs(tile_bbox["width"] - tile_bbox["height"])
+                if width_height_diff > 1:
+                    violations.append(
+                        f"{config_name}: Tile ({row},{col}) is not square: "
+                        f"width={tile_bbox['width']:.1f}px, height={tile_bbox['height']:.1f}px, "
+                        f"diff={width_height_diff:.1f}px"
+                    )
+    
+    # Report all violations
+    if violations:
+        violation_report = "\n  - ".join([""] + violations)
+        pytest.fail(f"TINY VIEWPORT (50×50) VIOLATIONS:{violation_report}")
