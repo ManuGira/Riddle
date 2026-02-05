@@ -27,6 +27,8 @@ For example:
 
 The aspect-ratio calculates the grid size WITHOUT accounting for these extra pixels, causing the grid to exceed its container bounds.
 
+**Critical Discovery:** Setting `gap: 0px` and `padding: 0px` does NOT fix the overflow issue. Tests still fail even without gap and padding, indicating a deeper CSS Grid + aspect-ratio sizing problem that needs to be solved.
+
 ## Current CSS Pattern (Step 4 - With Gap/Padding Issue)
 
 ```css
@@ -64,6 +66,11 @@ The aspect-ratio calculates the grid size WITHOUT accounting for these extra pix
 
 ### Primary Goal
 Fix the CSS Grid overflow issue while maintaining `gap: 5px` and `padding: 5px` for proper visual spacing. The solution must work with ANY viewport size and grid configuration (6×3 to 6×25).
+
+### Key Insight: Gap Uses Fixed Pixels
+The `gap: 5px` uses an absolute pixel measurement that doesn't scale with the grid. Ideally, the gap should be proportional to tile size (e.g., 5-10% of tile size). This fixed-pixel gap may prevent proper shrinking.
+
+**Hint:** Consider using relative units or percentages for gap, or calculate gap dynamically based on tile size. The gap should be approximately 10-20 times smaller than the tile size to maintain proper proportions.
 
 ### Layout Rules (Must All Pass)
 1. ✅ **Viewport constrains board** - Board never overflows viewport
