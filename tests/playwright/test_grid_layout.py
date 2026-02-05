@@ -842,21 +842,24 @@ def test_grid_maximizes_space_usage(page, grid_layout_page_path):
         page.wait_for_timeout(100)
         
         # Get bounding boxes
-        container = page.locator(".board-container")
+        # We measure against test-container (viewport), not board-container
+        # The test-container has the red border and represents the entire viewport
+        viewport_container = page.locator(".test-container")
         grid = page.locator("#grid")
         
-        container_bbox = container.bounding_box()
+        viewport_bbox = viewport_container.bounding_box()
         grid_bbox = grid.bounding_box()
         
-        assert container_bbox is not None, f"{config_name}: Container bounding box should exist"
+        assert viewport_bbox is not None, f"{config_name}: Viewport bounding box should exist"
         assert grid_bbox is not None, f"{config_name}: Grid bounding box should exist"
         
         # Calculate padding on all sides
-        # Padding = space between container edge and grid edge
-        hpad_left = grid_bbox["x"] - container_bbox["x"]
-        hpad_right = (container_bbox["x"] + container_bbox["width"]) - (grid_bbox["x"] + grid_bbox["width"])
-        vpad_top = grid_bbox["y"] - container_bbox["y"]
-        vpad_bottom = (container_bbox["y"] + container_bbox["height"]) - (grid_bbox["y"] + grid_bbox["height"])
+        # Padding = space between viewport edge and grid edge
+        # Account for test-container border (3px on each side)
+        hpad_left = grid_bbox["x"] - (viewport_bbox["x"] + 3)
+        hpad_right = (viewport_bbox["x"] + viewport_bbox["width"] - 3) - (grid_bbox["x"] + grid_bbox["width"])
+        vpad_top = grid_bbox["y"] - (viewport_bbox["y"] + 3)
+        vpad_bottom = (viewport_bbox["y"] + viewport_bbox["height"] - 3) - (grid_bbox["y"] + grid_bbox["height"])
         
         # Total padding in each direction
         hpad_total = hpad_left + hpad_right
