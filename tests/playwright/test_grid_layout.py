@@ -690,3 +690,103 @@ def test_strict_rule_tiles_must_be_square(page, grid_layout_page_path):
     if violations:
         violation_report = "\n  - ".join([""] + violations)
         pytest.fail(f"RULE VIOLATION: Tiles are not square:{violation_report}")
+
+
+def test_gap_spacing_is_uniform(page, grid_layout_page_path):
+    """Test that the gap spacing between tiles is consistent across all positions.
+    
+    This test validates that the spacing between tiles is uniform:
+    - All horizontal gaps are the same
+    - All vertical gaps are the same
+    - CSS gap property is set to 5px
+    
+    Note: Due to CSS Grid track sizing with aspect-ratio, the visual spacing
+    may be larger than the CSS gap value, but should be consistent within each direction.
+    The test ensures consistency rather than absolute gap values.
+    """
+    configs = [
+        ("6x3", 6, 3, 800, 600),
+        ("6x5", 6, 5, 800, 600),
+        ("6x25", 6, 25, 1280, 720),
+    ]
+    
+    violations = []
+    
+    for config_name, rows, cols, width, height in configs:
+        page.set_viewport_size({"width": width, "height": height})
+        page.goto(f"file://{grid_layout_page_path}")
+        page.evaluate(f"initializeGrid({rows}, {cols})")
+        page.wait_for_timeout(100)
+        
+        # Verify CSS gap property is set correctly
+        computed_gap = page.evaluate("""
+            () => {
+                const grid = document.getElementById('grid');
+                const style = window.getComputedStyle(grid);
+                return {
+                    columnGap: parseFloat(style.columnGap),
+                    rowGap: parseFloat(style.rowGap)
+                };
+            }
+        """)
+        
+        expected_gap = 5
+        if computed_gap["columnGap"] != expected_gap:
+            violations.append(
+                f"{config_name}: CSS columnGap is {computed_gap['columnGap']}px, expected {expected_gap}px"
+            )
+        if computed_gap["rowGap"] != expected_gap:
+            violations.append(
+                f"{config_name}: CSS rowGap is {computed_gap['rowGap']}px, expected {expected_gap}px"
+            )
+        
+        # Measure multiple horizontal gaps to ensure consistency
+        horizontal_gaps = []
+        for col in range(min(5, cols - 1)):  # Check first 5 gaps or all available
+            tile_0 = page.locator(f'.tile[data-row="0"][data-col="{col}"]')
+            tile_1 = page.locator(f'.tile[data-row="0"][data-col="{col + 1}"]')
+            
+            if tile_0.is_visible() and tile_1.is_visible():
+                bbox_0 = tile_0.bounding_box()
+                bbox_1 = tile_1.bounding_box()
+                
+                if bbox_0 and bbox_1:
+                    gap = bbox_1["x"] - (bbox_0["x"] + bbox_0["width"])
+                    horizontal_gaps.append(gap)
+        
+        # Measure multiple vertical gaps to ensure consistency
+        vertical_gaps = []
+        for row in range(min(5, rows - 1)):  # Check first 5 gaps or all available
+            tile_0 = page.locator(f'.tile[data-row="{row}"][data-col="0"]')
+            tile_1 = page.locator(f'.tile[data-row="{row + 1}"][data-col="0"]')
+            
+            if tile_0.is_visible() and tile_1.is_visible():
+                bbox_0 = tile_0.bounding_box()
+                bbox_1 = tile_1.bounding_box()
+                
+                if bbox_0 and bbox_1:
+                    gap = bbox_1["y"] - (bbox_0["y"] + bbox_0["height"])
+                    vertical_gaps.append(gap)
+        
+        # Check consistency within horizontal gaps (all should be the same)
+        if horizontal_gaps:
+            avg_horizontal_gap = sum(horizontal_gaps) / len(horizontal_gaps)
+            for i, gap in enumerate(horizontal_gaps):
+                if abs(gap - avg_horizontal_gap) > 1:
+                    violations.append(
+                        f"{config_name}: Inconsistent horizontal gaps - gap {i}={gap:.1f}px, avg={avg_horizontal_gap:.1f}px"
+                    )
+        
+        # Check consistency within vertical gaps (all should be the same)
+        if vertical_gaps:
+            avg_vertical_gap = sum(vertical_gaps) / len(vertical_gaps)
+            for i, gap in enumerate(vertical_gaps):
+                if abs(gap - avg_vertical_gap) > 1:
+                    violations.append(
+                        f"{config_name}: Inconsistent vertical gaps - gap {i}={gap:.1f}px, avg={avg_vertical_gap:.1f}px"
+                    )
+    
+    # Report all violations
+    if violations:
+        violation_report = "\n  - ".join([""] + violations)
+        pytest.fail(f"GAP SPACING VIOLATIONS:{violation_report}")
