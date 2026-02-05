@@ -70,7 +70,7 @@
              */
             --tile-size-from-width: max(10px, calc((100vw - 22px - (var(--cols, 5) - 1) * 5px) / var(--cols, 5)));
             --tile-size-from-height: max(10px, calc((100vh - 22px - (var(--rows, 6) - 1) * 5px) / var(--rows, 6)));
-            --tile-size: min(200px, var(--tile-size-from-width), var(--tile-size-from-height));
+            --tile-size: min(var(--tile-size-from-width), var(--tile-size-from-height));
             
             /* Grid dimensions fill the constraining dimension completely */
             width: calc(var(--tile-size) * var(--cols, 5) + 5px * (var(--cols, 5) - 1) + 16px);
@@ -92,7 +92,7 @@
              */
             --tile-size-from-width: max(10px, calc((100vw - 22px - (var(--cols, 5) - 1) * 5px) / var(--cols, 5)));
             --tile-size-from-height: max(10px, calc((100vh - 22px - (var(--rows, 6) - 1) * 5px) / var(--rows, 6)));
-            width: min(200px, var(--tile-size-from-width), var(--tile-size-from-height));
+            width: min(var(--tile-size-from-width), var(--tile-size-from-height));
             aspect-ratio: 1 / 1;
             
             background-color: #ffffff;
