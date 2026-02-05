@@ -6,8 +6,8 @@ CSS Grid with `gap: 5px` and `padding: 5px` causes tile overflow when using dyna
 **Failing Test:** `test_strict_rule_grid_must_not_overflow_board` (8/9 tests passing)
 
 **Overflow Amounts:**
-- 6×3 horizontal (1400×600): 343px bottom overflow
-- 6×25 vertical (800×1400): 74px right overflow
+- 6×3 horizontal (1400×600): bottom overflow
+- 6×25 vertical (800×1400): right overflow
 
 ## Root Cause
 CSS Grid gap is NOT included in intrinsic size calculation with `aspect-ratio`. The gap and padding pixels are added ON TOP of the calculated size.
