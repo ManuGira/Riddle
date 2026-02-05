@@ -693,16 +693,28 @@ def test_strict_rule_tiles_must_be_square(page, grid_layout_page_path):
 
 
 def test_gap_spacing_is_uniform(page, grid_layout_page_path):
-    """Test that the gap spacing between tiles is consistent across all positions.
+    """Test that the CSS gap property is correctly configured for uniform spacing.
     
-    This test validates that the spacing between tiles is uniform:
-    - All horizontal gaps are the same
-    - All vertical gaps are the same
-    - CSS gap property is set to 5px
+    This test validates that:
+    - CSS gap property is set to 5px (for both rowGap and columnGap)
+    - All horizontal gaps are consistent with each other
+    - All vertical gaps are consistent with each other
     
-    Note: Due to CSS Grid track sizing with aspect-ratio, the visual spacing
-    may be larger than the CSS gap value, but should be consistent within each direction.
-    The test ensures consistency rather than absolute gap values.
+    **Note on visual gap equality**: Due to CSS Grid track sizing with minmax(0, 1fr)
+    and dynamic aspect-ratio, the visual spacing between tiles may differ between
+    horizontal and vertical directions. This is because tiles use max-width/max-height
+    to maintain square aspect-ratio, which allows them to be smaller than grid tracks.
+    
+    The CSS gap property creates uniform spacing within the grid's coordinate system,
+    but visual spacing depends on how much of each track the tile occupies. This is
+    a fundamental limitation of combining:
+    - CSS Grid with gap
+    - Dynamic aspect-ratio
+    - Square tiles (via aspect-ratio: 1/1)
+    - Overflow prevention (via minmax(0, 1fr))
+    
+    The test validates that the CSS is correctly configured, acknowledging that
+    perfect visual gap equality across directions requires a different layout approach.
     """
     configs = [
         ("6x3", 6, 3, 800, 600),
