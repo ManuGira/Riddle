@@ -41,23 +41,38 @@
             background-color: #d0d0d0;
         }
 
-        /* Grid container - uses CSS Grid with calculated sizing */
+        /* Grid container - uses CSS Grid with maximized sizing */
         .board-grid {
             display: grid;
             grid-template-columns: repeat(var(--cols, 5), 1fr);
             grid-template-rows: repeat(var(--rows, 6), 1fr);
             gap: 5px; /* Gap between tiles - uniform in both directions */
             
-            /* Calculate grid size based on tile size:
-             * total = (tile_size * count) + (gap * (count - 1)) + (padding * 2) + (border * 2)
-             * We need to use the min() from tile calculation inline here
+            /* Calculate maximum tile size for each dimension independently:
+             * 
+             * Overhead breakdown:
+             * - test-container border: 3px * 2 = 6px
+             * - grid border: 3px * 2 = 6px
+             * - grid padding: 5px * 2 = 10px
+             * - gaps between tiles: (n-1) * 5px
+             * Total overhead = 6px + 6px + 10px + (n-1)*5px = 22px + (n-1)*5px
+             * 
+             * Available space = viewport - overhead
+             * Tile size = available_space / count
+             * 
+             * Grid size = tile_size * count + gaps + padding + border
+             * = tile_size * count + (count-1)*5px + 10px + 6px
+             * = tile_size * count + (count-1)*5px + 16px
+             * 
+             * Strategy: Calculate tile size from each dimension independently,
+             * then use min() to choose the constraining dimension.
+             * This maximizes the grid to fill one dimension completely.
              */
-            --tile-size: min(
-                80px,
-                max(10px, calc((100vw - 28px - (var(--cols, 5) - 1) * 5px) / var(--cols, 5))),
-                max(10px, calc((100vh - 28px - (var(--rows, 6) - 1) * 5px) / var(--rows, 6)))
-            );
+            --tile-size-from-width: max(10px, calc((100vw - 22px - (var(--cols, 5) - 1) * 5px) / var(--cols, 5)));
+            --tile-size-from-height: max(10px, calc((100vh - 22px - (var(--rows, 6) - 1) * 5px) / var(--rows, 6)));
+            --tile-size: min(200px, var(--tile-size-from-width), var(--tile-size-from-height));
             
+            /* Grid dimensions fill the constraining dimension completely */
             width: calc(var(--tile-size) * var(--cols, 5) + 5px * (var(--cols, 5) - 1) + 16px);
             height: calc(var(--tile-size) * var(--rows, 6) + 5px * (var(--rows, 6) - 1) + 16px);
             
@@ -72,12 +87,12 @@
 
         /* Tile - must maintain square aspect ratio */
         .tile {
-            /* Use the same calculation as grid's --tile-size */
-            width: min(
-                80px,
-                max(10px, calc((100vw - 28px - (var(--cols, 5) - 1) * 5px) / var(--cols, 5))),
-                max(10px, calc((100vh - 28px - (var(--rows, 6) - 1) * 5px) / var(--rows, 6)))
-            );
+            /* Use the same calculation as grid's --tile-size
+             * This ensures tiles match the grid's dimension calculations
+             */
+            --tile-size-from-width: max(10px, calc((100vw - 22px - (var(--cols, 5) - 1) * 5px) / var(--cols, 5)));
+            --tile-size-from-height: max(10px, calc((100vh - 22px - (var(--rows, 6) - 1) * 5px) / var(--rows, 6)));
+            width: min(200px, var(--tile-size-from-width), var(--tile-size-from-height));
             aspect-ratio: 1 / 1;
             
             background-color: #ffffff;
