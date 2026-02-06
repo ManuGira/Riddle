@@ -17,8 +17,3 @@ src/riddle.egg-info
 tests/playwright/*.png
 tests/playwright/test-results/
 .playwright/
-
-# Temporary screenshots and test outputs
-tmp/*.png
-tmp/*.jpg
-tmp/*.jpeg
