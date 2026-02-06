@@ -67,6 +67,9 @@ body {
     /* Use small viewport height to account for mobile browser UI */
     height: 100svh;
     height: 100dvh;
+    
+    /* Debug border: Magenta for viewport */
+    border: 3px solid magenta;
 }
 
 /* ==============================================
@@ -132,6 +135,9 @@ body {
     display: flex;
     flex-direction: column;
     gap: clamp(4px, 1vw, 8px);
+    
+    /* Debug border: Red for header container */
+    border: 3px solid red;
 }
 
 .header {
@@ -239,6 +245,9 @@ body {
     
     /* Container queries for responsive font sizing */
     container-type: size;
+    
+    /* Debug border: Green for board grid container */
+    border: 3px solid green;
 }
 
 /* Tile - Square cells that scale with grid */
@@ -323,6 +332,9 @@ body {
     
     /* Padding for spacing from board */
     padding-top: clamp(6px, 2vw, 10px);
+    
+    /* Debug border: Blue for keyboard container */
+    border: 3px solid blue;
 }
 
 .keyboard-row {
