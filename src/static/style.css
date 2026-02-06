@@ -21,6 +21,28 @@
     /* Layout proportions */
     --header-aspect: 8 / 1;
     --keyboard-aspect: 5 / 2;
+    
+    /* Space-maximizing grid layout - Step 4B pattern */
+    /* Fixed gap for uniform spacing */
+    --gap: 5px;
+    
+    /* Overhead calculation:
+     * Mobile:
+     * - body uses dvh (100dvh) - accounts for browser UI
+     * - container padding: ~8px (clamp average) * 2 = 16px (top/bottom)
+     * - board padding: ~6px (clamp average) * 2 = 12px (top/bottom, no left/right)
+     * - grid gap: (n-1) * 5px
+     * Total vertical overhead: 16px + 12px = 28px + (n-1)*5px
+     * Total horizontal overhead: 16px (just container) + (n-1)*5px
+     * 
+     * For simplicity, use max overhead (vertical): 28px
+     */
+    --overhead-total: 28px;
+    
+    /* Calculate tile size from both dimensions - choose smaller (constraining dimension) */
+    --tile-size-from-width: calc((100vw - var(--overhead-total) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+    --tile-size-from-height: calc((100dvh - var(--overhead-total) - (var(--rows) - 1) * var(--gap)) / var(--rows));
+    --tile-size: min(var(--tile-size-from-width), var(--tile-size-from-height));
 }
 
 /* Reset */
@@ -190,7 +212,8 @@ body {
     
     /* Constrain to parent */
     width: 100%;
-    min-height: 0; /* Allow flex shrinking */
+    min-height: 0; /* Critical: Allow flex shrinking below content height */
+    min-width: 0;  /* Critical: Allow flex shrinking below content width */
     
     /* Padding for breathing room */
     padding: clamp(4px, 1vh, 8px) 0;
@@ -202,18 +225,12 @@ body {
     display: grid;
     grid-template-columns: repeat(var(--cols), 1fr);
     grid-template-rows: repeat(var(--rows), 1fr);
-    gap: clamp(3px, 0.5vmin, 6px);
+    gap: var(--gap); /* Fixed 5px gap for uniform spacing */
     
-    /* Dynamic aspect ratio based on grid dimensions */
-    /* For 5 cols, 6 rows: aspect-ratio = 5/6 */
-    /* For 25 cols, 6 rows: aspect-ratio = 25/6 */
-    aspect-ratio: calc(var(--cols) / var(--rows));
-    
-    /* Start with full width, let aspect-ratio calculate height */
-    /* Then constrain by max-height if height exceeds available space */
-    width: 100%;
-    height: auto;
-    max-height: 100%;
+    /* Space-maximizing layout - NO dynamic aspect-ratio on grid */
+    /* Grid sizes itself based on calculated tile size */
+    width: calc(var(--tile-size) * var(--cols) + var(--gap) * (var(--cols) - 1));
+    height: calc(var(--tile-size) * var(--rows) + var(--gap) * (var(--rows) - 1));
     
     /* Container queries for responsive font sizing */
     container-type: size;
@@ -221,10 +238,14 @@ body {
 
 /* Tile - Square cells that scale with grid */
 .tile {
-    /* Let grid handle sizing */
+    /* Tiles fill grid cells and maintain square aspect-ratio */
     width: 100%;
     height: 100%;
     aspect-ratio: 1 / 1; /* Always square */
+    
+    /* Critical: Allow tile to shrink below its natural size */
+    min-width: 0;
+    min-height: 0;
     
     /* Layout */
     display: flex;
