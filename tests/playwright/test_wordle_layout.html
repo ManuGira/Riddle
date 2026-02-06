@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wordle Layout Test</title>
+    <style>
+        /* Embedded CSS from src/static/style.css for testing */
+        :root {
+            --cols: 5;
+            --rows: 6;
+            --gap: 5px;
+            --overhead-horizontal: 16px;
+            --overhead-vertical: 243px;
+            --tile-size-from-width: calc((100vw - var(--overhead-horizontal) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+            --tile-size-from-height: calc((100dvh - var(--overhead-vertical) - (var(--rows) - 1) * var(--gap)) / var(--rows));
+            --tile-size: min(var(--tile-size-from-width), var(--tile-size-from-height));
+            --color-border: #d3d6da;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100svh;
+            height: 100dvh;
+            border: 3px solid magenta;
+        }
+
+        .container {
+            width: 100%;
+            height: 100svh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            padding: clamp(6px, 2vw, 12px);
+            overflow: hidden;
+        }
+
+        @media (min-width: 601px) {
+            body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                overflow: auto;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+            
+            .container {
+                width: min(100vw - 40px, 400px);
+                height: min(90vh, 844px);
+                max-width: 400px;
+                max-height: 844px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                padding: 12px;
+            }
+        }
+
+        .header-section {
+            flex: 0 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(4px, 1vw, 8px);
+            border: 3px solid red;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: clamp(6px, 1.5vw, 10px);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .header-left,
+        .header-right {
+            width: clamp(50px, 15vw, 70px);
+            display: flex;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: clamp(24px, 7vw, 36px);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-align: center;
+            flex: 1;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: clamp(12px, 4vw, 20px);
+            font-size: clamp(12px, 3vw, 14px);
+            color: #666;
+        }
+
+        .message {
+            text-align: center;
+            font-size: clamp(12px, 3vw, 14px);
+            font-weight: 600;
+            min-height: clamp(18px, 4vw, 24px);
+        }
+
+        .board {
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 0;
+            min-width: 0;
+            padding: clamp(4px, 1vh, 8px) 0;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(var(--cols), 1fr);
+            grid-template-rows: repeat(var(--rows), 1fr);
+            gap: var(--gap);
+            width: calc(var(--tile-size) * var(--cols) + var(--gap) * (var(--cols) - 1));
+            height: calc(var(--tile-size) * var(--rows) + var(--gap) * (var(--rows) - 1));
+            container-type: size;
+            border: 3px solid green;
+        }
+
+        .tile {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: 1 / 1;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(12px, 5cqmin, 32px);
+            font-weight: 700;
+            text-transform: uppercase;
+            border: 2px solid var(--color-border);
+            background-color: #fff;
+            transition: transform 0.1s;
+        }
+
+        .keyboard {
+            flex: 0 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(3px, 1vw, 6px);
+            padding-top: clamp(6px, 2vw, 10px);
+            border: 3px solid blue;
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: clamp(2px, 0.8vw, 4px);
+        }
+
+        .key {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: clamp(28px, 8vw, 43px);
+            height: clamp(38px, 10vw, 58px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(10px, 3vw, 14px);
+            font-weight: 600;
+            text-transform: uppercase;
+            background-color: #d3d6da;
+            border: none;
+            border-radius: clamp(2px, 0.5vw, 4px);
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.1s;
+        }
+
+        .key.wide {
+            flex-grow: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header-section">
+            <div class="header">
+                <div class="header-left"></div>
+                <h1 class="title">WORDLE</h1>
+                <div class="header-right"></div>
+            </div>
+            <div class="game-info">
+                <span>Test Layout</span>
+            </div>
+            <div class="message"></div>
+        </header>
+
+        <div id="game-board" class="board">
+            <!-- Grid will be generated by JavaScript -->
+        </div>
+
+        <div id="keyboard" class="keyboard">
+            <div class="keyboard-row">
+                <div class="key">Q</div>
+                <div class="key">W</div>
+                <div class="key">E</div>
+                <div class="key">R</div>
+                <div class="key">T</div>
+                <div class="key">Y</div>
+                <div class="key">U</div>
+                <div class="key">I</div>
+                <div class="key">O</div>
+                <div class="key">P</div>
+            </div>
+            <div class="keyboard-row">
+                <div class="key">A</div>
+                <div class="key">S</div>
+                <div class="key">D</div>
+                <div class="key">F</div>
+                <div class="key">G</div>
+                <div class="key">H</div>
+                <div class="key">J</div>
+                <div class="key">K</div>
+                <div class="key">L</div>
+            </div>
+            <div class="keyboard-row">
+                <div class="key wide">ENTER</div>
+                <div class="key">Z</div>
+                <div class="key">X</div>
+                <div class="key">C</div>
+                <div class="key">V</div>
+                <div class="key">B</div>
+                <div class="key">N</div>
+                <div class="key">M</div>
+                <div class="key wide">⌫</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize grid function
+        function initializeGrid(rows, cols) {
+            document.documentElement.style.setProperty('--cols', cols);
+            document.documentElement.style.setProperty('--rows', rows);
+            
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            
+            const gridContainer = document.createElement('div');
+            gridContainer.className = 'board-grid';
+            
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    tile.dataset.row = i;
+                    tile.dataset.col = j;
+                    gridContainer.appendChild(tile);
+                }
+            }
+            
+            board.appendChild(gridContainer);
+        }
+
+        // Initialize with default 6x5 grid
+        initializeGrid(6, 5);
+    </script>
+</body>
+</html>

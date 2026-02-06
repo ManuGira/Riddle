@@ -10,10 +10,10 @@ Tests:
 Expected behavior:
 - Containers should not overlap (each should have distinct boundaries)
 - Phone layout should work correctly
-- Desktop layout may fail initially but should pass after fixes
+- Desktop 6×3 may show grid overflow (which we're testing for)
+- Desktop 6×25 should work correctly
 
-NOTE: These tests require the Wordle server to be running locally.
-They will be skipped in CI environments.
+NOTE: Uses standalone test HTML file with embedded CSS.
 """
 
 import pytest
@@ -21,9 +21,9 @@ from pathlib import Path
 
 
 @pytest.fixture(scope="module")
-def wordle_html_path():
-    """Return the path to the static Wordle HTML page."""
-    return Path(__file__).parent.parent.parent / "src" / "static" / "index.html"
+def wordle_test_html_path():
+    """Return the path to the test Wordle HTML page with embedded CSS."""
+    return Path(__file__).parent / "test_wordle_layout.html"
 
 
 def check_containers_not_overlapping(page, test_name):
@@ -152,7 +152,7 @@ def check_containers_not_overlapping(page, test_name):
     return result
 
 
-def test_wordle_containers_phone_6x3(page, wordle_html_path):
+def test_wordle_containers_phone_6x3(page, wordle_test_html_path):
     """Test container overlap on phone layout with 6×3 grid.
     
     The 'page' parameter is a Playwright fixture provided by pytest-playwright.
@@ -160,33 +160,12 @@ def test_wordle_containers_phone_6x3(page, wordle_html_path):
     # Phone viewport
     page.set_viewport_size({"width": 400, "height": 844})
     
-    # Navigate to local HTML file
-    page.goto(f"file://{wordle_html_path}")
-    page.wait_for_timeout(1000)  # Wait for page to load
+    # Navigate to test HTML file
+    page.goto(f"file://{wordle_test_html_path}")
+    page.wait_for_timeout(500)
     
-    # Override grid to 6x3 configuration
-    page.evaluate("""() => {
-        document.documentElement.style.setProperty('--cols', '3');
-        document.documentElement.style.setProperty('--rows', '6');
-        
-        const board = document.getElementById('game-board');
-        board.innerHTML = '';
-        
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'board-grid';
-        
-        for (let i = 0; i < 6; i++) {
-            for (let j = 0; j < 3; j++) {
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                tile.dataset.row = i;
-                tile.dataset.col = j;
-                gridContainer.appendChild(tile);
-            }
-        }
-        
-        board.appendChild(gridContainer);
-    }""")
+    # Initialize grid with 6x3 configuration using the page's init function
+    page.evaluate("initializeGrid(6, 3)")
     
     page.wait_for_timeout(500)
     
@@ -217,7 +196,7 @@ def test_wordle_containers_phone_6x3(page, wordle_html_path):
     assert result['passed'], f"Containers overlap on phone 6×3 layout: {result['overlaps']}"
 
 
-def test_wordle_containers_phone_6x25(page, wordle_html_path):
+def test_wordle_containers_phone_6x25(page, wordle_test_html_path):
     """Test container overlap on phone layout with 6×25 grid.
     
     The 'page' parameter is a Playwright fixture provided by pytest-playwright.
@@ -225,33 +204,12 @@ def test_wordle_containers_phone_6x25(page, wordle_html_path):
     # Phone viewport
     page.set_viewport_size({"width": 400, "height": 844})
     
-    # Navigate to local HTML file
-    page.goto(f"file://{wordle_html_path}")
-    page.wait_for_timeout(1000)  # Wait for page to load
+    # Navigate to test HTML file
+    page.goto(f"file://{wordle_test_html_path}")
+    page.wait_for_timeout(500)
     
-    # Override grid to 6x25 configuration
-    page.evaluate("""() => {
-        document.documentElement.style.setProperty('--cols', '25');
-        document.documentElement.style.setProperty('--rows', '6');
-        
-        const board = document.getElementById('game-board');
-        board.innerHTML = '';
-        
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'board-grid';
-        
-        for (let i = 0; i < 6; i++) {
-            for (let j = 0; j < 25; j++) {
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                tile.dataset.row = i;
-                tile.dataset.col = j;
-                gridContainer.appendChild(tile);
-            }
-        }
-        
-        board.appendChild(gridContainer);
-    }""")
+    # Initialize grid with 6x25 configuration
+    page.evaluate("initializeGrid(6, 25)")
     
     page.wait_for_timeout(500)
     
@@ -282,7 +240,7 @@ def test_wordle_containers_phone_6x25(page, wordle_html_path):
     assert result['passed'], f"Containers overlap on phone 6×25 layout: {result['overlaps']}"
 
 
-def test_wordle_containers_desktop_6x3(page, wordle_html_path):
+def test_wordle_containers_desktop_6x3(page, wordle_test_html_path):
     """Test container overlap on desktop layout with 6×3 grid.
     
     The 'page' parameter is a Playwright fixture provided by pytest-playwright.
@@ -291,33 +249,12 @@ def test_wordle_containers_desktop_6x3(page, wordle_html_path):
     # Desktop viewport
     page.set_viewport_size({"width": 1280, "height": 720})
     
-    # Navigate to local HTML file
-    page.goto(f"file://{wordle_html_path}")
-    page.wait_for_timeout(1000)  # Wait for page to load
+    # Navigate to test HTML file
+    page.goto(f"file://{wordle_test_html_path}")
+    page.wait_for_timeout(500)
     
-    # Override grid to 6x3 configuration
-    page.evaluate("""() => {
-        document.documentElement.style.setProperty('--cols', '3');
-        document.documentElement.style.setProperty('--rows', '6');
-        
-        const board = document.getElementById('game-board');
-        board.innerHTML = '';
-        
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'board-grid';
-        
-        for (let i = 0; i < 6; i++) {
-            for (let j = 0; j < 3; j++) {
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                tile.dataset.row = i;
-                tile.dataset.col = j;
-                gridContainer.appendChild(tile);
-            }
-        }
-        
-        board.appendChild(gridContainer);
-    }""")
+    # Initialize grid with 6x3 configuration
+    page.evaluate("initializeGrid(6, 3)")
     
     page.wait_for_timeout(500)
     
@@ -348,7 +285,7 @@ def test_wordle_containers_desktop_6x3(page, wordle_html_path):
     assert result['passed'], f"Containers overlap on desktop 6×3 layout: {result['overlaps']}"
 
 
-def test_wordle_containers_desktop_6x25(page, wordle_html_path):
+def test_wordle_containers_desktop_6x25(page, wordle_test_html_path):
     """Test container overlap on desktop layout with 6×25 grid.
     
     The 'page' parameter is a Playwright fixture provided by pytest-playwright.
@@ -356,33 +293,12 @@ def test_wordle_containers_desktop_6x25(page, wordle_html_path):
     # Desktop viewport
     page.set_viewport_size({"width": 1280, "height": 720})
     
-    # Navigate to local HTML file
-    page.goto(f"file://{wordle_html_path}")
-    page.wait_for_timeout(1000)  # Wait for page to load
+    # Navigate to test HTML file
+    page.goto(f"file://{wordle_test_html_path}")
+    page.wait_for_timeout(500)
     
-    # Override grid to 6x25 configuration
-    page.evaluate("""() => {
-        document.documentElement.style.setProperty('--cols', '25');
-        document.documentElement.style.setProperty('--rows', '6');
-        
-        const board = document.getElementById('game-board');
-        board.innerHTML = '';
-        
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'board-grid';
-        
-        for (let i = 0; i < 6; i++) {
-            for (let j = 0; j < 25; j++) {
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                tile.dataset.row = i;
-                tile.dataset.col = j;
-                gridContainer.appendChild(tile);
-            }
-        }
-        
-        board.appendChild(gridContainer);
-    }""")
+    # Initialize grid with 6x25 configuration
+    page.evaluate("initializeGrid(6, 25)")
     
     page.wait_for_timeout(500)
     
