@@ -10,10 +10,20 @@ Tests:
 Expected behavior:
 - Containers should not overlap (each should have distinct boundaries)
 - Phone layout should work correctly
-- Desktop layout may fail (expected for now)
+- Desktop layout may fail initially but should pass after fixes
+
+NOTE: These tests require the Wordle server to be running locally.
+They will be skipped in CI environments.
 """
 
 import pytest
+from pathlib import Path
+
+
+@pytest.fixture(scope="module")
+def wordle_html_path():
+    """Return the path to the static Wordle HTML page."""
+    return Path(__file__).parent.parent.parent / "src" / "static" / "index.html"
 
 
 def check_containers_not_overlapping(page, test_name):
@@ -142,23 +152,17 @@ def check_containers_not_overlapping(page, test_name):
     return result
 
 
-def test_wordle_containers_phone_6x3(page):
-    """Test container overlap on phone layout with 6×3 grid."""
+def test_wordle_containers_phone_6x3(page, wordle_html_path):
+    """Test container overlap on phone layout with 6×3 grid.
+    
+    The 'page' parameter is a Playwright fixture provided by pytest-playwright.
+    """
     # Phone viewport
     page.set_viewport_size({"width": 400, "height": 844})
     
-    # Navigate to Wordle
-    page.goto("http://127.0.0.1:8000/wordle-en-5", wait_until='networkidle', timeout=10000)
-    page.wait_for_load_state('networkidle', timeout=10000)
-    
-    # Close modal if open
-    try:
-        close_btn = page.locator('span.close')
-        if close_btn.is_visible():
-            close_btn.click()
-            page.wait_for_timeout(500)
-    except:
-        pass
+    # Navigate to local HTML file
+    page.goto(f"file://{wordle_html_path}")
+    page.wait_for_timeout(1000)  # Wait for page to load
     
     # Override grid to 6x3 configuration
     page.evaluate("""() => {
@@ -185,9 +189,6 @@ def test_wordle_containers_phone_6x3(page):
     }""")
     
     page.wait_for_timeout(500)
-    
-    # Take screenshot
-    page.screenshot(path='tmp/test_phone_6x3_containers.png')
     
     # Check for overlaps
     result = check_containers_not_overlapping(page, "Phone 6×3")
@@ -216,23 +217,17 @@ def test_wordle_containers_phone_6x3(page):
     assert result['passed'], f"Containers overlap on phone 6×3 layout: {result['overlaps']}"
 
 
-def test_wordle_containers_phone_6x25(page):
-    """Test container overlap on phone layout with 6×25 grid."""
+def test_wordle_containers_phone_6x25(page, wordle_html_path):
+    """Test container overlap on phone layout with 6×25 grid.
+    
+    The 'page' parameter is a Playwright fixture provided by pytest-playwright.
+    """
     # Phone viewport
     page.set_viewport_size({"width": 400, "height": 844})
     
-    # Navigate to Wordle
-    page.goto("http://127.0.0.1:8000/wordle-en-5", wait_until='networkidle', timeout=10000)
-    page.wait_for_load_state('networkidle', timeout=10000)
-    
-    # Close modal if open
-    try:
-        close_btn = page.locator('span.close')
-        if close_btn.is_visible():
-            close_btn.click()
-            page.wait_for_timeout(500)
-    except:
-        pass
+    # Navigate to local HTML file
+    page.goto(f"file://{wordle_html_path}")
+    page.wait_for_timeout(1000)  # Wait for page to load
     
     # Override grid to 6x25 configuration
     page.evaluate("""() => {
@@ -259,9 +254,6 @@ def test_wordle_containers_phone_6x25(page):
     }""")
     
     page.wait_for_timeout(500)
-    
-    # Take screenshot
-    page.screenshot(path='tmp/test_phone_6x25_containers.png')
     
     # Check for overlaps
     result = check_containers_not_overlapping(page, "Phone 6×25")
@@ -290,26 +282,18 @@ def test_wordle_containers_phone_6x25(page):
     assert result['passed'], f"Containers overlap on phone 6×25 layout: {result['overlaps']}"
 
 
-def test_wordle_containers_desktop_6x3(page):
+def test_wordle_containers_desktop_6x3(page, wordle_html_path):
     """Test container overlap on desktop layout with 6×3 grid.
     
-    This test is expected to potentially fail, showing the problem.
+    The 'page' parameter is a Playwright fixture provided by pytest-playwright.
+    This test currently fails due to grid overflow - will be fixed in future commits.
     """
     # Desktop viewport
     page.set_viewport_size({"width": 1280, "height": 720})
     
-    # Navigate to Wordle
-    page.goto("http://127.0.0.1:8000/wordle-en-5", wait_until='networkidle', timeout=10000)
-    page.wait_for_load_state('networkidle', timeout=10000)
-    
-    # Close modal if open
-    try:
-        close_btn = page.locator('span.close')
-        if close_btn.is_visible():
-            close_btn.click()
-            page.wait_for_timeout(500)
-    except:
-        pass
+    # Navigate to local HTML file
+    page.goto(f"file://{wordle_html_path}")
+    page.wait_for_timeout(1000)  # Wait for page to load
     
     # Override grid to 6x3 configuration
     page.evaluate("""() => {
@@ -337,9 +321,6 @@ def test_wordle_containers_desktop_6x3(page):
     
     page.wait_for_timeout(500)
     
-    # Take screenshot
-    page.screenshot(path='tmp/test_desktop_6x3_containers.png')
-    
     # Check for overlaps
     result = check_containers_not_overlapping(page, "Desktop 6×3")
     
@@ -363,32 +344,21 @@ def test_wordle_containers_desktop_6x3(page):
     
     print(f"{'='*60}\n")
     
-    # This test may fail - that's expected for now
-    # We're using pytest.raises to catch the expected failure
-    if not result['passed']:
-        pytest.skip(f"Desktop 6×3 layout has overlaps (EXPECTED): {result['overlaps']}")
+    # Assert no overlaps - this test will fail until the issue is fixed
+    assert result['passed'], f"Containers overlap on desktop 6×3 layout: {result['overlaps']}"
 
 
-def test_wordle_containers_desktop_6x25(page):
+def test_wordle_containers_desktop_6x25(page, wordle_html_path):
     """Test container overlap on desktop layout with 6×25 grid.
     
-    This test is expected to potentially fail, showing the problem.
+    The 'page' parameter is a Playwright fixture provided by pytest-playwright.
     """
     # Desktop viewport
     page.set_viewport_size({"width": 1280, "height": 720})
     
-    # Navigate to Wordle
-    page.goto("http://127.0.0.1:8000/wordle-en-5", wait_until='networkidle', timeout=10000)
-    page.wait_for_load_state('networkidle', timeout=10000)
-    
-    # Close modal if open
-    try:
-        close_btn = page.locator('span.close')
-        if close_btn.is_visible():
-            close_btn.click()
-            page.wait_for_timeout(500)
-    except:
-        pass
+    # Navigate to local HTML file
+    page.goto(f"file://{wordle_html_path}")
+    page.wait_for_timeout(1000)  # Wait for page to load
     
     # Override grid to 6x25 configuration
     page.evaluate("""() => {
@@ -416,9 +386,6 @@ def test_wordle_containers_desktop_6x25(page):
     
     page.wait_for_timeout(500)
     
-    # Take screenshot
-    page.screenshot(path='tmp/test_desktop_6x25_containers.png')
-    
     # Check for overlaps
     result = check_containers_not_overlapping(page, "Desktop 6×25")
     
@@ -442,7 +409,5 @@ def test_wordle_containers_desktop_6x25(page):
     
     print(f"{'='*60}\n")
     
-    # This test may fail - that's expected for now
-    # We're using pytest.skip to mark it as expected failure
-    if not result['passed']:
-        pytest.skip(f"Desktop 6×25 layout has overlaps (EXPECTED): {result['overlaps']}")
+    # Assert no overlaps (this should pass)
+    assert result['passed'], f"Containers overlap on desktop 6×25 layout: {result['overlaps']}"
