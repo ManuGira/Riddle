@@ -22,26 +22,31 @@
     --header-aspect: 8 / 1;
     --keyboard-aspect: 5 / 2;
     
-    /* Space-maximizing grid layout - Step 4B pattern */
+    /* Space-maximizing grid layout - Step 4B pattern adapted for Wordle */
     /* Fixed gap for uniform spacing */
     --gap: 5px;
     
-    /* Overhead calculation:
-     * Mobile:
-     * - body uses dvh (100dvh) - accounts for browser UI
-     * - container padding: ~8px (clamp average) * 2 = 16px (top/bottom)
-     * - board padding: ~6px (clamp average) * 2 = 12px (top/bottom, no left/right)
-     * - grid gap: (n-1) * 5px
-     * Total vertical overhead: 16px + 12px = 28px + (n-1)*5px
-     * Total horizontal overhead: 16px (just container) + (n-1)*5px
+    /* Overhead calculation - different for horizontal vs vertical:
      * 
-     * For simplicity, use max overhead (vertical): 28px
+     * HORIZONTAL (width):
+     * - Container padding: ~8px * 2 = 16px (left/right)
+     * Total: 16px
+     * 
+     * VERTICAL (height):  
+     * - Header section: ~79px
+     * - Keyboard: ~136px
+     * - Container padding: ~8px * 2 = 16px (top/bottom)
+     * - Board padding: ~6px * 2 = 12px (top/bottom)
+     * Total: ~243px
+     * 
+     * This approach works for mobile-first design.
      */
-    --overhead-total: 28px;
+    --overhead-horizontal: 16px;
+    --overhead-vertical: 243px;
     
     /* Calculate tile size from both dimensions - choose smaller (constraining dimension) */
-    --tile-size-from-width: calc((100vw - var(--overhead-total) - (var(--cols) - 1) * var(--gap)) / var(--cols));
-    --tile-size-from-height: calc((100dvh - var(--overhead-total) - (var(--rows) - 1) * var(--gap)) / var(--rows));
+    --tile-size-from-width: calc((100vw - var(--overhead-horizontal) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+    --tile-size-from-height: calc((100dvh - var(--overhead-vertical) - (var(--rows) - 1) * var(--gap)) / var(--rows));
     --tile-size: min(var(--tile-size-from-width), var(--tile-size-from-height));
 }
 
