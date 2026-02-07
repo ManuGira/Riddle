@@ -26,7 +26,7 @@ def static_dir():
     return Path(__file__).parent.parent.parent / "src" / "static"
 
 
-def check_tiles_are_square(page, test_name, tolerance_px=2):
+def check_tiles_are_square(page, test_name, tolerance_px=1):
     """Check if all tiles in the grid are square (width ≈ height).
     
     Args:
@@ -270,7 +270,7 @@ def test_wordle_containers_phone_6x3(page, static_dir):
     result = check_containers_not_overlapping(page, "Phone 6×3")
     
     # Check if tiles are square
-    square_result = check_tiles_are_square(page, "Phone 6×3", tolerance_px=2)
+    square_result = check_tiles_are_square(page, "Phone 6×3", tolerance_px=1)
     
     # Print results
     print(f"\n{'='*60}")
@@ -365,7 +365,7 @@ def test_wordle_containers_phone_6x25(page, static_dir):
     result = check_containers_not_overlapping(page, "Phone 6×25")
     
     # Check if tiles are square
-    square_result = check_tiles_are_square(page, "Phone 6×25", tolerance_px=2)
+    square_result = check_tiles_are_square(page, "Phone 6×25", tolerance_px=1)
     
     # Print results
     print(f"\n{'='*60}")
@@ -461,7 +461,7 @@ def test_wordle_containers_desktop_6x3(page, static_dir):
     result = check_containers_not_overlapping(page, "Desktop 6×3")
     
     # Check if tiles are square
-    square_result = check_tiles_are_square(page, "Desktop 6×3", tolerance_px=2)
+    square_result = check_tiles_are_square(page, "Desktop 6×3", tolerance_px=1)
     
     # Print results
     print(f"\n{'='*60}")
@@ -556,7 +556,7 @@ def test_wordle_containers_desktop_6x25(page, static_dir):
     result = check_containers_not_overlapping(page, "Desktop 6×25")
     
     # Check if tiles are square
-    square_result = check_tiles_are_square(page, "Desktop 6×25", tolerance_px=2)
+    square_result = check_tiles_are_square(page, "Desktop 6×25", tolerance_px=1)
     
     # Print results
     print(f"\n{'='*60}")
