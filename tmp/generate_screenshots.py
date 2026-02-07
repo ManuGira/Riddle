@@ -50,14 +50,14 @@ def generate_screenshots():
             # Wait for page to be ready
             page.wait_for_load_state("networkidle")
             
-            # Initialize the grid with the desired configuration
+            # Initialize the grid and keyboard with the desired configuration
             page.evaluate(f"""
                 () => {{
                     // Set CSS variables for grid size
                     document.documentElement.style.setProperty('--cols', '{cols}');
                     document.documentElement.style.setProperty('--rows', '{rows}');
                     
-                    // Create tiles
+                    // Create tiles in the grid
                     const grid = document.querySelector('.board-grid');
                     if (grid) {{
                         grid.innerHTML = '';
@@ -71,6 +71,42 @@ def generate_screenshots():
                                 grid.appendChild(tile);
                             }}
                         }}
+                    }}
+                    
+                    // Create keyboard
+                    const keyboard = document.getElementById('keyboard');
+                    const keyboardLayout = [
+                        ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+                        ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+                        ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '⌫']
+                    ];
+                    
+                    if (keyboard) {{
+                        keyboard.innerHTML = '';
+                        keyboardLayout.forEach(row => {{
+                            const keyRow = document.createElement('div');
+                            keyRow.className = 'keyboard-row';
+                            
+                            row.forEach(key => {{
+                                const button = document.createElement('button');
+                                button.className = 'key';
+                                
+                                if (key === 'ENTER') {{
+                                    button.classList.add('key-large');
+                                    button.textContent = 'ENTER';
+                                }} else if (key === '⌫') {{
+                                    button.classList.add('key-large');
+                                    button.textContent = '⌫';
+                                }} else {{
+                                    button.textContent = key;
+                                    button.dataset.letter = key;
+                                }}
+                                
+                                keyRow.appendChild(button);
+                            }});
+                            
+                            keyboard.appendChild(keyRow);
+                        }});
                     }}
                 }}
             """)
