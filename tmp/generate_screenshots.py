@@ -1,11 +1,14 @@
-"""Generate screenshots of Wordle layout for different grid configurations and viewports."""
+"""Generate screenshots of Wordle production layout for different grid configurations.
 
-import sys
+This script renders the actual production code from src/static/ by:
+1. Loading the production HTML (index.html)
+2. Injecting the production CSS (style.css)  
+3. Manually initializing tiles and keyboard (production game.js needs server API)
+4. Capturing screenshots at different viewport sizes
+"""
+
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-
-# Add parent directory to path to use the test fixture logic
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 def generate_screenshots():
     """Generate screenshots for 6x3 and 6x25 grids on mobile and desktop."""
@@ -14,7 +17,7 @@ def generate_screenshots():
     html_path = static_dir / "index.html"
     css_path = static_dir / "style.css"
     
-    # Read the CSS content
+    # Read the production CSS
     css_content = css_path.read_text()
     
     with sync_playwright() as p:
@@ -33,31 +36,34 @@ def generate_screenshots():
             
             page = browser.new_page(viewport={"width": width, "height": height})
             
-            # Load the HTML file
+            # Load the production HTML file
             page.goto(f"file://{html_path.absolute()}")
             
-            # Remove the broken stylesheet link
+            # Remove the broken stylesheet and script links (won't work with file:// protocol)
             page.evaluate("""
                 () => {
                     const link = document.querySelector('link[href="/static/style.css"]');
                     if (link) link.remove();
+                    const script = document.querySelector('script[src="/static/game.js"]');
+                    if (script) script.remove();
                 }
             """)
             
             # Inject the actual production CSS
             page.add_style_tag(content=css_content)
             
-            # Wait for page to be ready
+            # Wait for page structure to be ready
             page.wait_for_load_state("networkidle")
             
-            # Initialize the grid and keyboard with the desired configuration
+            # Initialize the grid and keyboard to match the configuration
+            # Note: Production game.js requires a server API, so we manually populate the UI
             page.evaluate(f"""
                 () => {{
-                    // Set CSS variables for grid size
+                    // Set CSS variables for grid size (used by production CSS)
                     document.documentElement.style.setProperty('--cols', '{cols}');
                     document.documentElement.style.setProperty('--rows', '{rows}');
                     
-                    // Create tiles in the grid
+                    // Create tiles in the grid (same as production game.js would do)
                     const grid = document.querySelector('.board-grid');
                     if (grid) {{
                         grid.innerHTML = '';
@@ -73,7 +79,7 @@ def generate_screenshots():
                         }}
                     }}
                     
-                    // Create keyboard
+                    // Create keyboard (same as production game.js would do)
                     const keyboard = document.getElementById('keyboard');
                     const keyboardLayout = [
                         ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -111,7 +117,7 @@ def generate_screenshots():
                 }}
             """)
             
-            # Wait a moment for rendering
+            # Wait a moment for complete rendering
             page.wait_for_timeout(500)
             
             # Take screenshot
@@ -124,6 +130,11 @@ def generate_screenshots():
         browser.close()
     
     print("\nAll screenshots generated successfully!")
+    print("\nThe screenshots show the production Wordle UI:")
+    print("- Production HTML structure from src/static/index.html")
+    print("- Production CSS styles from src/static/style.css")
+    print("- UI elements initialized to match production game.js behavior")
+    print("  (game.js requires server API, so tiles/keyboard are manually populated)")
 
 if __name__ == "__main__":
     generate_screenshots()
