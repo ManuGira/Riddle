@@ -510,6 +510,21 @@ def evaluate_opening_entropy_numba_parallel(words_array: np.ndarray, hint_matrix
     return total_entropy / N, total_remaining / N
 
 
+def compute_word_raw_entropy(words_list: str, entropy_maps):
+    # sum the entropies for each letter in the word
+    # if a letter appears multiple times, keep the highest entropy only
+
+    # Todo: aggregate rows of hint matrix would be more accurate
+
+    long_word = "".join(words_list)
+    L = len(entropy_maps)
+    entropies_to_sum: dict[str, float] = {letter: 0 for letter in set(long_word)}
+    for pos, letter in enumerate(long_word):
+        entropy = entropy_maps[pos%L][letter]
+        entropies_to_sum[letter] = max(entropies_to_sum[letter], entropy)
+    return sum(entropies_to_sum.values())
+
+
 def compute_word_match_with_hints_matrix(words_list: list[str]):
     words_list = [w.upper() for w in words_list]
     # convert words_list to numpy array of shape (N, L) and dtype uint8
@@ -518,32 +533,73 @@ def compute_word_match_with_hints_matrix(words_list: list[str]):
 
     print("Words array shape:", words_array.shape)
 
+    if False:
+        opening_candidates_file = DATA_FOLDER_PATH / "wordle_openings" / "wordle_openings_EN_L5_N3.csv"
+        opening_list = load_words_combinations(opening_candidates_file)
+        opening_list = [
+                           ["HATES", "ROUND", "CLIMB"],
+                           # ["BLANK", "BLANK", "BLANK", "BLANK"],
+                           # ["BLANK", "CREST", "BLANK", "BLANK"],
+                           # ["BLANK", "CREST", "WIMPY", "BLANK"],
+                           # ["BLANK", "CREST", "WIMPY", "DOUGH"],
+                       ] + opening_list
+    else:
+        # make all combinations of 2 words from words_list (order does not matter)
+        from riddle.common import compute_positional_letter_entropy
+        entropy_maps = compute_positional_letter_entropy(words_list)
+        # compute entropy score for each word
+        word_entropy_scores = [(word, compute_word_raw_entropy(word, entropy_maps)) for word in words_list]
+        # sort by entropy score descending
+        word_entropy_scores.sort(key=lambda x: x[1], reverse=True)
+        sorted_word_list = [wes[0] for wes in word_entropy_scores]
+        best_raw_entropy = word_entropy_scores[0][1]
+        print("Top 10 words by positional letter entropy:")
+        for w, s in word_entropy_scores[:10]:
+            print(f"{w}: {s:.4f}")
 
-    opening_candidates_file = DATA_FOLDER_PATH / "wordle_openings" / "wordle_openings_EN_L5_N4.csv"
-    opening_list = load_words_combinations(opening_candidates_file)
+        # generate combinations of 2 words using a zig-zag pattern from the sorted list
+        from itertools import combinations
+        opening_list = []
+        N = len(sorted_word_list)
 
-    opening_list = [
-                          ["BLANK", "BLANK", "BLANK", "BLANK"],
-                          ["BLANK", "CREST", "BLANK", "BLANK"],
-                          ["BLANK", "CREST", "WIMPY", "BLANK"],
-                          ["BLANK", "CREST", "WIMPY", "DOUGH"],
-                      ] + opening_list
+        for i in range(N):
+            for j in range(i):
+                opening_list.append([sorted_word_list[i], sorted_word_list[j]])
+        print(f"Generated {len(opening_list)} opening combinations of 2 words.")
 
 
-    # expected_entropies: list[tuple[list[str], float]] = []
-    
-    for opening in opening_list:
+    # expected_entropies: list[tuple[float, list[str]]] = []
+    best_entropy = -1.0
+    best_opening = []
+
+    raw_entropy_threshold = best_raw_entropy * 2 ** (1 / len(opening_list[0])) * 1.1
+    k = 0
+    for i, opening in enumerate(opening_list):
+        # if the entropy of the tuple is low, skip it
+        raw_entropy = compute_word_raw_entropy("".join(opening), entropy_maps)
+
+        if raw_entropy < raw_entropy_threshold:
+            k += 1
+            continue
+
         opening_words_indices = [words_list.index(w) for w in opening]
 
         expected_entropy, expected_remaning_words = evaluate_opening_entropy_numba_parallel(words_array, hint_matrix,
                                                                              opening_words_indices)
-        # expected_entropies.append((opening, expected_entropy))
-        print(f"Opening: {'-'.join(opening)}, Avg remaining words: {expected_remaning_words:.2f}, entropy: {expected_entropy:.2f}")
-    return 
+        # expected_entropies.append((expected_entropy, opening))
+        if expected_entropy > best_entropy:
+            best_entropy = expected_entropy
+            best_opening = opening
+            print(f"({k}/{i}/{len(opening_list)})Opening: {'-'.join(opening)}, Avg remaining words: {expected_remaning_words:.2f}, entropy: {expected_entropy:.2f}")
+
+    return
 
 
 def main():
-    words = ["apple", "brave", "crane", "doubt", "eagle", "flint", "grape", "honey", "input", "jumpy"]
+    # words = ["apple", "brave", "crane", "doubt", "eagle", "flint", "grape", "honey", "input", "jumpy"]
+
+
+
 
     # load words from data/words_lists/wordle_list_{language}_L{length}_base.txt
     words_file = DATA_FOLDER_PATH / "words_lists" / "wordle_list_EN_L5_base.txt"

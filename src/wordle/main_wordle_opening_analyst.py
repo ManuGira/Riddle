@@ -269,7 +269,7 @@ def find_best_word_combination(
                 else:
                     # Subsequent occurrences: reduced weight (30%)
                     # This penalizes having the same letter multiple times
-                    weight = entropy * 0.3
+                    weight = entropy * 0.2
                 
                 objective_terms.append(weight * z[letter][pos])
         
@@ -400,7 +400,7 @@ def find_best_opening(language: Language, length: int, N: int, top_k: int = 1):
 
 
 def main():
-    find_best_opening(Language.EN, 5, 4, 1000)
+    find_best_opening(Language.EN, 5, 3, 1000)
     return
 
     parser = argparse.ArgumentParser(
