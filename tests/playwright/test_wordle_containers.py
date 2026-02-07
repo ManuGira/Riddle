@@ -26,6 +26,68 @@ def static_dir():
     return Path(__file__).parent.parent.parent / "src" / "static"
 
 
+def check_tiles_are_square(page, test_name, tolerance_px=2):
+    """Check if all tiles in the grid are square (width ≈ height).
+    
+    Args:
+        page: Playwright page object
+        test_name: Name of the test for reporting
+        tolerance_px: Maximum allowed difference between width and height in pixels
+    
+    Returns a dict with test results including:
+    - non_square_tiles: list of tiles that are not square
+    - tile_measurements: list of all tile dimensions
+    - passed: bool indicating if all tiles are square
+    """
+    # Get all tile dimensions
+    tile_data = page.evaluate("""() => {
+        const tiles = document.querySelectorAll('.board-grid .tile');
+        const measurements = [];
+        
+        tiles.forEach((tile, index) => {
+            const rect = tile.getBoundingClientRect();
+            measurements.push({
+                index,
+                row: tile.dataset.row,
+                col: tile.dataset.col,
+                width: rect.width,
+                height: rect.height,
+                aspect_ratio: rect.width / rect.height
+            });
+        });
+        
+        return {
+            tile_count: tiles.length,
+            tiles: measurements
+        };
+    }""")
+    
+    # Check which tiles are not square
+    non_square_tiles = []
+    for tile in tile_data['tiles']:
+        width_height_diff = abs(tile['width'] - tile['height'])
+        if width_height_diff > tolerance_px:
+            non_square_tiles.append({
+                'index': tile['index'],
+                'row': tile['row'],
+                'col': tile['col'],
+                'width': tile['width'],
+                'height': tile['height'],
+                'difference': width_height_diff,
+                'aspect_ratio': tile['aspect_ratio']
+            })
+    
+    result = {
+        'test_name': test_name,
+        'passed': len(non_square_tiles) == 0,
+        'non_square_tiles': non_square_tiles,
+        'tile_count': tile_data['tile_count'],
+        'tolerance_px': tolerance_px
+    }
+    
+    return result
+
+
 def check_containers_not_overlapping(page, test_name):
     """Check if header, board, and keyboard containers are not overlapping.
     
@@ -207,11 +269,15 @@ def test_wordle_containers_phone_6x3(page, static_dir):
     # Check for overlaps
     result = check_containers_not_overlapping(page, "Phone 6×3")
     
+    # Check if tiles are square
+    square_result = check_tiles_are_square(page, "Phone 6×3", tolerance_px=2)
+    
     # Print results
     print(f"\n{'='*60}")
     print(f"Test: {result['test_name']}")
     print(f"Viewport: {result['measurements']['viewport']['width']}×{result['measurements']['viewport']['height']}")
-    print(f"Status: {'✓ PASS' if result['passed'] else '✗ FAIL'}")
+    print(f"Overlap Status: {'✓ PASS' if result['passed'] else '✗ FAIL'}")
+    print(f"Square Tiles Status: {'✓ PASS' if square_result['passed'] else '✗ FAIL'}")
     
     if result['overlaps']:
         print(f"\nOverlaps detected ({len(result['overlaps'])}):")
@@ -225,10 +291,23 @@ def test_wordle_containers_phone_6x3(page, static_dir):
     else:
         print("\nNo overlaps detected ✓")
     
+    if square_result['non_square_tiles']:
+        print(f"\nNon-square tiles detected ({len(square_result['non_square_tiles'])} out of {square_result['tile_count']}):")
+        for tile in square_result['non_square_tiles'][:5]:  # Show first 5
+            print(f"  - Tile[{tile['row']},{tile['col']}]: {tile['width']:.1f}×{tile['height']:.1f}px "
+                  f"(diff: {tile['difference']:.1f}px, ratio: {tile['aspect_ratio']:.3f})")
+        if len(square_result['non_square_tiles']) > 5:
+            print(f"  ... and {len(square_result['non_square_tiles']) - 5} more")
+    else:
+        print(f"\nAll {square_result['tile_count']} tiles are square ✓")
+    
     print(f"{'='*60}\n")
     
     # Assert no overlaps (this should pass on phone)
     assert result['passed'], f"Containers overlap on phone 6×3 layout: {result['overlaps']}"
+    
+    # Assert tiles are square (this should pass on phone)
+    assert square_result['passed'], f"Tiles are not square on phone 6×3 layout: {len(square_result['non_square_tiles'])} tiles have width != height"
 
 
 def test_wordle_containers_phone_6x25(page, static_dir):
@@ -285,11 +364,15 @@ def test_wordle_containers_phone_6x25(page, static_dir):
     # Check for overlaps
     result = check_containers_not_overlapping(page, "Phone 6×25")
     
+    # Check if tiles are square
+    square_result = check_tiles_are_square(page, "Phone 6×25", tolerance_px=2)
+    
     # Print results
     print(f"\n{'='*60}")
     print(f"Test: {result['test_name']}")
     print(f"Viewport: {result['measurements']['viewport']['width']}×{result['measurements']['viewport']['height']}")
-    print(f"Status: {'✓ PASS' if result['passed'] else '✗ FAIL'}")
+    print(f"Overlap Status: {'✓ PASS' if result['passed'] else '✗ FAIL'}")
+    print(f"Square Tiles Status: {'✓ PASS' if square_result['passed'] else '✗ FAIL'}")
     
     if result['overlaps']:
         print(f"\nOverlaps detected ({len(result['overlaps'])}):")
@@ -303,10 +386,23 @@ def test_wordle_containers_phone_6x25(page, static_dir):
     else:
         print("\nNo overlaps detected ✓")
     
+    if square_result['non_square_tiles']:
+        print(f"\nNon-square tiles detected ({len(square_result['non_square_tiles'])} out of {square_result['tile_count']}):")
+        for tile in square_result['non_square_tiles'][:5]:  # Show first 5
+            print(f"  - Tile[{tile['row']},{tile['col']}]: {tile['width']:.1f}×{tile['height']:.1f}px "
+                  f"(diff: {tile['difference']:.1f}px, ratio: {tile['aspect_ratio']:.3f})")
+        if len(square_result['non_square_tiles']) > 5:
+            print(f"  ... and {len(square_result['non_square_tiles']) - 5} more")
+    else:
+        print(f"\nAll {square_result['tile_count']} tiles are square ✓")
+    
     print(f"{'='*60}\n")
     
     # Assert no overlaps (this should pass on phone)
     assert result['passed'], f"Containers overlap on phone 6×25 layout: {result['overlaps']}"
+    
+    # Assert tiles are square (this should pass on phone)
+    assert square_result['passed'], f"Tiles are not square on phone 6×25 layout: {len(square_result['non_square_tiles'])} tiles have width != height"
 
 
 def test_wordle_containers_desktop_6x3(page, static_dir):
@@ -364,11 +460,15 @@ def test_wordle_containers_desktop_6x3(page, static_dir):
     # Check for overlaps
     result = check_containers_not_overlapping(page, "Desktop 6×3")
     
+    # Check if tiles are square
+    square_result = check_tiles_are_square(page, "Desktop 6×3", tolerance_px=2)
+    
     # Print results
     print(f"\n{'='*60}")
     print(f"Test: {result['test_name']}")
     print(f"Viewport: {result['measurements']['viewport']['width']}×{result['measurements']['viewport']['height']}")
-    print(f"Status: {'✓ PASS' if result['passed'] else '✗ FAIL (EXPECTED)'}")
+    print(f"Overlap Status: {'✓ PASS' if result['passed'] else '✗ FAIL (EXPECTED)'}")
+    print(f"Square Tiles Status: {'✓ PASS' if square_result['passed'] else '✗ FAIL (EXPECTED)'}")
     
     if result['overlaps']:
         print(f"\nOverlaps detected ({len(result['overlaps'])}):")
@@ -382,10 +482,23 @@ def test_wordle_containers_desktop_6x3(page, static_dir):
     else:
         print("\nNo overlaps detected ✓")
     
+    if square_result['non_square_tiles']:
+        print(f"\nNon-square tiles detected ({len(square_result['non_square_tiles'])} out of {square_result['tile_count']}):")
+        for tile in square_result['non_square_tiles'][:5]:  # Show first 5
+            print(f"  - Tile[{tile['row']},{tile['col']}]: {tile['width']:.1f}×{tile['height']:.1f}px "
+                  f"(diff: {tile['difference']:.1f}px, ratio: {tile['aspect_ratio']:.3f})")
+        if len(square_result['non_square_tiles']) > 5:
+            print(f"  ... and {len(square_result['non_square_tiles']) - 5} more")
+    else:
+        print(f"\nAll {square_result['tile_count']} tiles are square ✓")
+    
     print(f"{'='*60}\n")
     
     # Assert no overlaps - this test will fail until the issue is fixed
     assert result['passed'], f"Containers overlap on desktop 6×3 layout: {result['overlaps']}"
+    
+    # Assert tiles are square - this test is expected to fail on desktop
+    assert square_result['passed'], f"Tiles are not square on desktop 6×3 layout: {len(square_result['non_square_tiles'])} tiles have width != height"
 
 
 def test_wordle_containers_desktop_6x25(page, static_dir):
@@ -442,11 +555,15 @@ def test_wordle_containers_desktop_6x25(page, static_dir):
     # Check for overlaps
     result = check_containers_not_overlapping(page, "Desktop 6×25")
     
+    # Check if tiles are square
+    square_result = check_tiles_are_square(page, "Desktop 6×25", tolerance_px=2)
+    
     # Print results
     print(f"\n{'='*60}")
     print(f"Test: {result['test_name']}")
     print(f"Viewport: {result['measurements']['viewport']['width']}×{result['measurements']['viewport']['height']}")
-    print(f"Status: {'✓ PASS' if result['passed'] else '✗ FAIL (EXPECTED)'}")
+    print(f"Overlap Status: {'✓ PASS' if result['passed'] else '✗ FAIL (EXPECTED)'}")
+    print(f"Square Tiles Status: {'✓ PASS' if square_result['passed'] else '✗ FAIL (EXPECTED)'}")
     
     if result['overlaps']:
         print(f"\nOverlaps detected ({len(result['overlaps'])}):")
@@ -460,7 +577,20 @@ def test_wordle_containers_desktop_6x25(page, static_dir):
     else:
         print("\nNo overlaps detected ✓")
     
+    if square_result['non_square_tiles']:
+        print(f"\nNon-square tiles detected ({len(square_result['non_square_tiles'])} out of {square_result['tile_count']}):")
+        for tile in square_result['non_square_tiles'][:5]:  # Show first 5
+            print(f"  - Tile[{tile['row']},{tile['col']}]: {tile['width']:.1f}×{tile['height']:.1f}px "
+                  f"(diff: {tile['difference']:.1f}px, ratio: {tile['aspect_ratio']:.3f})")
+        if len(square_result['non_square_tiles']) > 5:
+            print(f"  ... and {len(square_result['non_square_tiles']) - 5} more")
+    else:
+        print(f"\nAll {square_result['tile_count']} tiles are square ✓")
+    
     print(f"{'='*60}\n")
     
     # Assert no overlaps (this should pass)
     assert result['passed'], f"Containers overlap on desktop 6×25 layout: {result['overlaps']}"
+    
+    # Assert tiles are square - this test is expected to fail on desktop
+    assert square_result['passed'], f"Tiles are not square on desktop 6×25 layout: {len(square_result['non_square_tiles'])} tiles have width != height"
