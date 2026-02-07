@@ -3,11 +3,16 @@
 
 class WordleGame {
     constructor() {
+        // Check if we're in preview mode (static configuration)
+        this.isPreviewMode = !!window.GAME_CONFIG;
+        
         // Get base path from injected global variable (defaults to '' for root)
         this.basePath = window.GAME_BASE_PATH || '';
         // Create unique storage key for each game
         this.storageKey = this.basePath ? `${this.basePath.replace(/\//g, '_')}_token` : 'wordle_token';
-        this.token = this.loadToken();
+        
+        // In preview mode, don't load token to avoid API calls
+        this.token = this.isPreviewMode ? null : this.loadToken();
         this.gameState = null;
         this.gameInfo = null;
         this.isSubmitting = false;
@@ -58,8 +63,8 @@ class WordleGame {
         // Create keyboard
         this.createKeyboard();
         
-        // Check if we have a saved game state
-        if (this.token) {
+        // Check if we have a saved game state (skip in preview mode)
+        if (this.token && !this.isPreviewMode) {
             await this.loadGameState();
         } else {
             this.updateDisplay();
@@ -106,6 +111,14 @@ class WordleGame {
     }
     
     async loadGameInfo() {
+        // Check if we have a static configuration (for previews)
+        if (window.GAME_CONFIG) {
+            this.gameInfo = window.GAME_CONFIG;
+            this.isPreviewMode = true;
+            console.log('Preview mode: Using static game configuration:', this.gameInfo);
+            return;
+        }
+        
         try {
             const response = await fetch(this.getApiUrl('/api/info'));
             this.gameInfo = await response.json();
@@ -238,6 +251,12 @@ class WordleGame {
     }
     
     async submitGuess() {
+        // In preview mode, show message instead of submitting
+        if (this.isPreviewMode) {
+            this.showMessage('🎨 Preview mode - No game submission available', 'info');
+            return;
+        }
+        
         if (this.isSubmitting) return;
         
         const guess = this.currentGuess.trim().toUpperCase();
@@ -347,6 +366,12 @@ class WordleGame {
     }
     
     async resetGame() {
+        // In preview mode, show message instead of resetting
+        if (this.isPreviewMode) {
+            this.showMessage('🎨 Preview mode - No game reset available', 'info');
+            return;
+        }
+        
         if (!confirm('Are you sure you want to reset the game? This will start over.')) {
             return;
         }
