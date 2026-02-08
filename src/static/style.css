@@ -21,6 +21,33 @@
     /* Layout proportions */
     --header-aspect: 8 / 1;
     --keyboard-aspect: 5 / 2;
+    
+    /* Space-maximizing grid layout - Step 4B pattern adapted for Wordle */
+    /* Fixed gap for uniform spacing */
+    --gap: 5px;
+    
+    /* Overhead calculation - different for horizontal vs vertical:
+     * 
+     * HORIZONTAL (width):
+     * - Container padding: ~8px * 2 = 16px (left/right)
+     * Total: 16px
+     * 
+     * VERTICAL (height):  
+     * - Header section: ~79px
+     * - Keyboard: ~136px
+     * - Container padding: ~8px * 2 = 16px (top/bottom)
+     * - Board padding: ~6px * 2 = 12px (top/bottom)
+     * Total: ~243px
+     * 
+     * This approach works for mobile-first design.
+     */
+    --overhead-horizontal: 16px;
+    --overhead-vertical: 243px;
+    
+    /* Calculate tile size from both dimensions - choose smaller (constraining dimension) */
+    --tile-size-from-width: calc((100vw - var(--overhead-horizontal) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+    --tile-size-from-height: calc((100dvh - var(--overhead-vertical) - (var(--rows) - 1) * var(--gap)) / var(--rows));
+    --tile-size: min(var(--tile-size-from-width), var(--tile-size-from-height));
 }
 
 /* Reset */
@@ -40,6 +67,9 @@ body {
     /* Use small viewport height to account for mobile browser UI */
     height: 100svh;
     height: 100dvh;
+    
+    /* Debug border: Magenta for viewport */
+    border: 3px solid magenta;
 }
 
 /* ==============================================
@@ -88,6 +118,16 @@ body {
         /* Consistent padding */
         padding: 12px;
     }
+    
+    /* CRITICAL FIX: Override CSS variables for phone mockup dimensions */
+    :root {
+        /* Desktop uses phone mockup dimensions, not full viewport */
+        /* Container is min(90vh, 844px) at 720px viewport = min(648px, 844px) = 648px */
+        /* Calculate tile size based on ACTUAL CONTAINER dimensions */
+        --tile-size-from-width: calc((400px - var(--overhead-horizontal) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+        --tile-size-from-height: calc((min(90vh, 844px) - var(--overhead-vertical) - (var(--rows) - 1) * var(--gap)) / var(--rows));
+        --tile-size: min(var(--tile-size-from-width), var(--tile-size-from-height));
+    }
 }
 
 /* ==============================================
@@ -105,6 +145,9 @@ body {
     display: flex;
     flex-direction: column;
     gap: clamp(4px, 1vw, 8px);
+    
+    /* Debug border: Red for header container */
+    border: 3px solid red;
 }
 
 .header {
@@ -190,7 +233,8 @@ body {
     
     /* Constrain to parent */
     width: 100%;
-    min-height: 0; /* Allow flex shrinking */
+    min-height: 0; /* Critical: Allow flex shrinking below content height */
+    min-width: 0;  /* Critical: Allow flex shrinking below content width */
     
     /* Padding for breathing room */
     padding: clamp(4px, 1vh, 8px) 0;
@@ -202,29 +246,30 @@ body {
     display: grid;
     grid-template-columns: repeat(var(--cols), 1fr);
     grid-template-rows: repeat(var(--rows), 1fr);
-    gap: clamp(3px, 0.5vmin, 6px);
+    gap: var(--gap); /* Fixed 5px gap for uniform spacing */
     
-    /* Dynamic aspect ratio based on grid dimensions */
-    /* For 5 cols, 6 rows: aspect-ratio = 5/6 */
-    /* For 25 cols, 6 rows: aspect-ratio = 25/6 */
-    aspect-ratio: calc(var(--cols) / var(--rows));
-    
-    /* Start with full width, let aspect-ratio calculate height */
-    /* Then constrain by max-height if height exceeds available space */
-    width: 100%;
-    height: auto;
-    max-height: 100%;
+    /* Space-maximizing layout - NO dynamic aspect-ratio on grid */
+    /* Grid sizes itself based on calculated tile size */
+    width: calc(var(--tile-size) * var(--cols) + var(--gap) * (var(--cols) - 1));
+    height: calc(var(--tile-size) * var(--rows) + var(--gap) * (var(--rows) - 1));
     
     /* Container queries for responsive font sizing */
     container-type: size;
+    
+    /* Debug border: Green for board grid container */
+    border: 3px solid green;
 }
 
 /* Tile - Square cells that scale with grid */
 .tile {
-    /* Let grid handle sizing */
+    /* Tiles fill grid cells and maintain square aspect-ratio */
     width: 100%;
     height: 100%;
     aspect-ratio: 1 / 1; /* Always square */
+    
+    /* Critical: Allow tile to shrink below its natural size */
+    min-width: 0;
+    min-height: 0;
     
     /* Layout */
     display: flex;
@@ -297,6 +342,9 @@ body {
     
     /* Padding for spacing from board */
     padding-top: clamp(6px, 2vw, 10px);
+    
+    /* Debug border: Blue for keyboard container */
+    border: 3px solid blue;
 }
 
 .keyboard-row {
