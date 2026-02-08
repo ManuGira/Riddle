@@ -204,6 +204,23 @@ def check_containers_not_overlapping(page, test_name):
                 'note': 'Grid overflows its parent container'
             })
     
+    # CRITICAL: Also check if board-grid overlaps with header or keyboard
+    # (even if it stays within board boundaries, it might overlap other containers)
+    header_section = measurements['headerSection']
+    keyboard = measurements['keyboard']
+    if board_grid['exists']:
+        # Check board-grid vs header-section
+        if header_section['exists']:
+            overlap = check_overlap(board_grid, header_section)
+            if overlap:
+                overlaps.append(overlap)
+        
+        # Check board-grid vs keyboard
+        if keyboard['exists']:
+            overlap = check_overlap(board_grid, keyboard)
+            if overlap:
+                overlaps.append(overlap)
+    
     result = {
         'test_name': test_name,
         'passed': len(overlaps) == 0,
