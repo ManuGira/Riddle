@@ -121,10 +121,11 @@ body {
     
     /* CRITICAL FIX: Override CSS variables for phone mockup dimensions */
     :root {
-        /* Desktop uses phone mockup dimensions (400px × 844px), not full viewport */
-        /* Calculate tile size based on CONTAINER dimensions, not viewport */
+        /* Desktop uses phone mockup dimensions, not full viewport */
+        /* Container is min(90vh, 844px) at 720px viewport = min(648px, 844px) = 648px */
+        /* Calculate tile size based on ACTUAL CONTAINER dimensions */
         --tile-size-from-width: calc((400px - var(--overhead-horizontal) - (var(--cols) - 1) * var(--gap)) / var(--cols));
-        --tile-size-from-height: calc((844px - var(--overhead-vertical) - (var(--rows) - 1) * var(--gap)) / var(--rows));
+        --tile-size-from-height: calc((min(90vh, 844px) - var(--overhead-vertical) - (var(--rows) - 1) * var(--gap)) / var(--rows));
         --tile-size: min(var(--tile-size-from-width), var(--tile-size-from-height));
     }
 }
