@@ -118,6 +118,15 @@ body {
         /* Consistent padding */
         padding: 12px;
     }
+    
+    /* CRITICAL FIX: Override CSS variables for phone mockup dimensions */
+    :root {
+        /* Desktop uses phone mockup dimensions (400px × 844px), not full viewport */
+        /* Calculate tile size based on CONTAINER dimensions, not viewport */
+        --tile-size-from-width: calc((400px - var(--overhead-horizontal) - (var(--cols) - 1) * var(--gap)) / var(--cols));
+        --tile-size-from-height: calc((844px - var(--overhead-vertical) - (var(--rows) - 1) * var(--gap)) / var(--rows));
+        --tile-size: min(var(--tile-size-from-width), var(--tile-size-from-height));
+    }
 }
 
 /* ==============================================
